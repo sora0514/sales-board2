@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>営業改善進捗ボード PRO v3.2</title>
+    <title>営業改善進捗ボード PRO v3.2.1</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -145,9 +145,10 @@
                             <p class="text-[10px] text-slate-500 font-bold uppercase mb-1">Total Sales</p>
                             <span id="kpi-sales" class="text-lg md:text-2xl font-black amount-font text-slate-800">--</span>
                         </div>
-                        <div class="metric-card bg-slate-900 text-white border-none shadow-lg">
-                            <p class="text-[10px] text-slate-400 font-bold uppercase mb-1">Total Profit</p>
-                            <span id="kpi-total-profit" class="text-lg md:text-2xl font-black amount-font text-emerald-400">--</span>
+                        <!-- Updated Profit Card: Standardized to white background with blue accent (matches bar charts) -->
+                        <div class="metric-card shadow-sm border-l-4 border-l-blue-600">
+                            <p class="text-[10px] text-slate-500 font-bold uppercase mb-1">Total Profit</p>
+                            <span id="kpi-total-profit" class="text-lg md:text-2xl font-black amount-font text-blue-600">--</span>
                         </div>
                         <div class="metric-card shadow-sm border-l-4 border-l-blue-600">
                             <p class="text-[10px] text-slate-500 font-bold uppercase mb-1">Avg Price</p>
