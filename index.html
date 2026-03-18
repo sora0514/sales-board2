@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>営業改善進捗ボード PRO v3.1</title>
+    <title>営業改善進捗ボード PRO v3.2</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -12,7 +12,7 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+JP:wght@400;700&display=swap');
         body { font-family: 'Inter', 'Noto Sans JP', sans-serif; }
         .sidebar-dark { background-color: #0f172a; }
-        .status-badge { padding: 4px 12px; border-radius: 9999px; font-size: 11px; font-weight: 700; }
+        .status-badge { padding: 4px 12px; border-radius: 9999px; font-size: 11px; font-weight: 700; white-space: nowrap; }
         .amount-font { font-family: 'Inter', sans-serif; letter-spacing: 0.02em; }
         .card-shadow { box-shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06); }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
@@ -23,6 +23,11 @@
         .edit-input:focus { background-color: white; border-color: #3b82f6; outline: none; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
         .save-indicator { transition: opacity 0.3s; opacity: 0; pointer-events: none; }
         .save-indicator.show { opacity: 1; }
+        /* モバイル用テーブルスクロール対策 */
+        @media (max-width: 768px) {
+            .mobile-scroll-x { overflow-x: auto; padding-bottom: 1rem; }
+            .mobile-min-w { min-width: 600px; }
+        }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900">
@@ -40,10 +45,10 @@
 
                 <nav class="mb-10 space-y-1">
                     <p class="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-3 px-2">Navigation</p>
-                    <button onclick="switchView('leads')" id="nav-leads" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-blue-600 text-white font-bold transition-all shadow-lg shadow-blue-500/20">
+                    <button onclick="switchView('leads')" id="nav-leads" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-blue-600 text-white font-bold transition-all shadow-lg shadow-blue-500/20 text-sm">
                         <i data-lucide="list-todo" size="18"></i> <span>案件管理</span>
                     </button>
-                    <button onclick="switchView('analytics')" id="nav-analytics" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-800 text-slate-400 font-bold transition-all">
+                    <button onclick="switchView('analytics')" id="nav-analytics" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-800 text-slate-400 font-bold transition-all text-sm">
                         <i data-lucide="bar-chart-3" size="18"></i> <span>トレンド分析</span>
                     </button>
                 </nav>
@@ -83,32 +88,47 @@
 
         <!-- Main Content -->
         <main class="flex-1 flex flex-col min-w-0 bg-slate-50 overflow-hidden">
-            <header class="h-20 px-10 flex items-center justify-between bg-white border-b border-slate-200 shrink-0">
-                <div class="flex items-center gap-4">
-                    <div class="relative group">
-                        <select id="month-selector" class="appearance-none bg-slate-100 pl-4 pr-10 py-2.5 rounded-xl text-sm font-bold text-slate-700 outline-none cursor-pointer border-none"></select>
-                        <i data-lucide="calendar" size="14" class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400"></i>
+            <!-- Header (Smartphone Optimized) -->
+            <header class="md:h-20 px-4 md:px-10 py-4 md:py-0 flex flex-col md:flex-row md:items-center justify-between bg-white border-b border-slate-200 shrink-0 gap-4">
+                
+                <!-- Row 1: Logo (Mobile only) & Action Buttons -->
+                <div class="flex items-center justify-between md:justify-start gap-4">
+                    <div class="flex items-center gap-2 md:hidden">
+                        <div class="bg-blue-600 p-1.5 rounded-lg text-white"><i data-lucide="shield-check" size="16"></i></div>
+                        <span class="font-bold text-sm">SalesBoard</span>
                     </div>
-                    <button onclick="addNewMonth()" class="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl transition-all"><i data-lucide="calendar-plus" size="18"></i></button>
-                    <div class="relative group">
-                        <i data-lucide="search" size="16" class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                        <input id="search-input" type="text" placeholder="案件名やステータスで検索..." class="pl-11 pr-4 py-2.5 bg-slate-100 rounded-xl text-sm w-64 focus:w-80 transition-all outline-none">
-                    </div>
-                    <div id="save-indicator" class="save-indicator flex items-center gap-2 text-[10px] font-bold text-slate-400 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-200">
-                        <i data-lucide="cloud-check" size="12" class="text-emerald-500"></i>
-                        <span>自動保存済み</span>
+                    
+                    <div class="flex items-center gap-2">
+                        <button id="add-lead-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 md:px-6 py-2.5 rounded-xl text-xs md:text-sm font-bold flex items-center gap-2 shadow-lg shadow-blue-500/20">
+                            <i data-lucide="plus" size="18"></i> <span class="hidden xs:inline">案件登録</span><span class="inline xs:hidden">追加</span>
+                        </button>
+                        <div id="save-indicator" class="save-indicator flex items-center gap-2 text-[10px] font-bold text-slate-400 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-200">
+                            <i data-lucide="cloud-check" size="12" class="text-emerald-500"></i>
+                            <span class="hidden sm:inline">自動保存済み</span>
+                        </div>
                     </div>
                 </div>
-                <button id="add-lead-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 shadow-lg shadow-blue-500/20">
-                    <i data-lucide="plus" size="18"></i> <span>案件新規登録</span>
-                </button>
+
+                <!-- Row 2: Selectors & Search -->
+                <div class="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
+                    <div class="relative shrink-0">
+                        <select id="month-selector" class="appearance-none bg-slate-100 pl-3 pr-8 py-2.5 rounded-xl text-xs md:text-sm font-bold text-slate-700 outline-none cursor-pointer border-none"></select>
+                        <i data-lucide="calendar" size="12" class="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400"></i>
+                    </div>
+                    <button onclick="addNewMonth()" class="shrink-0 p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl transition-all"><i data-lucide="calendar-plus" size="18"></i></button>
+                    
+                    <div class="relative flex-1 md:flex-none group">
+                        <i data-lucide="search" size="14" class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                        <input id="search-input" type="text" placeholder="検索..." class="pl-10 pr-4 py-2.5 bg-slate-100 rounded-xl text-xs md:text-sm w-full md:w-48 lg:w-64 focus:md:w-80 transition-all outline-none">
+                    </div>
+                </div>
             </header>
 
-            <div id="content-scroll" class="flex-1 overflow-y-auto p-10 custom-scrollbar">
+            <div id="content-scroll" class="flex-1 overflow-y-auto p-4 md:p-10 custom-scrollbar">
                 
                 <!-- View 1: Leads List -->
                 <div id="view-leads" class="max-w-6xl mx-auto space-y-6">
-                    <div class="grid grid-cols-12 gap-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    <div class="hidden md:grid md:grid-cols-12 gap-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">
                         <div class="col-span-4">Project Details</div>
                         <div class="col-span-2 text-center">Status</div>
                         <div class="col-span-2 text-right">Revenue</div>
@@ -120,37 +140,35 @@
 
                 <!-- View 2: Analytics -->
                 <div id="view-analytics" class="max-w-6xl mx-auto hidden space-y-8 pb-10">
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div class="metric-card shadow-sm border-l-4 border-l-slate-800">
-                            <p class="text-[10px] text-slate-500 font-bold uppercase mb-1">Total Sales (全期間)</p>
-                            <span id="kpi-sales" class="text-2xl font-black amount-font text-slate-800">--</span>
+                            <p class="text-[10px] text-slate-500 font-bold uppercase mb-1">Total Sales</p>
+                            <span id="kpi-sales" class="text-lg md:text-2xl font-black amount-font text-slate-800">--</span>
                         </div>
                         <div class="metric-card bg-slate-900 text-white border-none shadow-lg">
-                            <p class="text-[10px] text-slate-400 font-bold uppercase mb-1">トータル粗利 (全期間)</p>
-                            <span id="kpi-total-profit" class="text-2xl font-black amount-font text-emerald-400">--</span>
+                            <p class="text-[10px] text-slate-400 font-bold uppercase mb-1">Total Profit</p>
+                            <span id="kpi-total-profit" class="text-lg md:text-2xl font-black amount-font text-emerald-400">--</span>
                         </div>
                         <div class="metric-card shadow-sm border-l-4 border-l-blue-600">
-                            <p class="text-[10px] text-slate-500 font-bold uppercase mb-1">平均成約単価 (全期間)</p>
-                            <span id="kpi-avg-price" class="text-2xl font-black amount-font text-blue-600">--</span>
+                            <p class="text-[10px] text-slate-500 font-bold uppercase mb-1">Avg Price</p>
+                            <span id="kpi-avg-price" class="text-lg md:text-2xl font-black amount-font text-blue-600">--</span>
                         </div>
                         <div class="metric-card shadow-sm border-l-4 border-l-emerald-600">
-                            <p class="text-[10px] text-slate-500 font-bold uppercase mb-1">成約率 (全期間)</p>
-                            <span id="kpi-win-rate" class="text-2xl font-black amount-font text-emerald-600">--%</span>
+                            <p class="text-[10px] text-slate-500 font-bold uppercase mb-1">Win Rate</p>
+                            <span id="kpi-win-rate" class="text-lg md:text-2xl font-black amount-font text-emerald-600">--%</span>
                         </div>
                     </div>
 
                     <div class="space-y-6">
-                        <div class="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm">
-                            <div class="flex justify-between items-center mb-8">
-                                <h3 class="font-bold text-slate-800 flex items-center gap-2 text-sm uppercase tracking-wider">
-                                    <i data-lucide="bar-chart-horizontal" size="18" class="text-blue-600"></i> 月別：利益額(粗利) ＆ 成約率実績 (棒グラフ)
-                                </h3>
-                            </div>
-                            <div class="h-96 w-full"><canvas id="performanceTrendChart"></canvas></div>
+                        <div class="bg-white p-4 md:p-8 rounded-2xl border border-slate-200 shadow-sm">
+                            <h3 class="font-bold text-slate-800 mb-8 flex items-center gap-2 text-xs md:text-sm uppercase tracking-wider">
+                                <i data-lucide="bar-chart-horizontal" size="18" class="text-blue-600"></i> 月別：利益額 ＆ 成約率
+                            </h3>
+                            <div class="h-64 md:h-96 w-full"><canvas id="performanceTrendChart"></canvas></div>
                         </div>
 
-                        <div class="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm">
-                            <h3 class="font-bold text-slate-800 mb-6 flex items-center gap-2 text-sm uppercase tracking-wider">
+                        <div class="bg-white p-4 md:p-8 rounded-2xl border border-slate-200 shadow-sm">
+                            <h3 class="font-bold text-slate-800 mb-6 flex items-center gap-2 text-xs md:text-sm uppercase tracking-wider">
                                 <i data-lucide="trending-up" size="18" class="text-slate-400"></i> 月別：収益・利益推移
                             </h3>
                             <div class="h-64 w-full"><canvas id="financialChart"></canvas></div>
@@ -163,8 +181,8 @@
 
     <!-- Month Modal -->
     <div id="month-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center hidden">
-        <div class="bg-white p-8 rounded-3xl shadow-2xl w-96">
-            <h3 class="text-xl font-bold mb-4">表示月の追加</h3>
+        <div class="bg-white p-8 rounded-3xl shadow-2xl w-80 md:w-96">
+            <h3 class="text-lg font-bold mb-4">表示月の追加</h3>
             <input type="month" id="new-month-input" class="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl mb-6 outline-none">
             <div class="flex gap-3">
                 <button onclick="closeMonthModal()" class="flex-1 py-3 text-sm font-bold text-slate-600 bg-slate-100 rounded-xl">キャンセル</button>
@@ -196,15 +214,9 @@
 
     const fmt = n => new Intl.NumberFormat('ja-JP').format(n);
 
-    // --- データの読み込み (Supabaseから取得) ---
     async function loadData() {
-        const { data, error } = await _supabase
-            .from('leads')
-            .select('*')
-            .order('id', { ascending: false });
-
+        const { data, error } = await _supabase.from('leads').select('*').order('id', { ascending: false });
         if (error) {
-            console.error('データ取得エラー:', error);
             const saved = localStorage.getItem(STORAGE_KEY);
             if (saved) leads = JSON.parse(saved).leads || [];
         } else {
@@ -213,20 +225,11 @@
         refreshUI();
     }
 
-    // --- データの保存 (Supabaseに保存) ---
     async function saveToLocalStorage() {
-        const { error } = await _supabase
-            .from('leads')
-            .upsert(leads);
-
+        const { error } = await _supabase.from('leads').upsert(leads);
         localStorage.setItem(STORAGE_KEY, JSON.stringify({ leads }));
-
         const el = document.getElementById('save-indicator');
-        if (el) {
-            el.classList.add('show');
-            setTimeout(() => el.classList.remove('show'), 2000);
-        }
-        if (error) console.error('保存エラー:', error);
+        if (el) { el.classList.add('show'); setTimeout(() => el.classList.remove('show'), 2000); }
     }
 
     function refreshUI() {
@@ -241,8 +244,8 @@
         currentView = view;
         document.getElementById('view-leads').classList.toggle('hidden', view !== 'leads');
         document.getElementById('view-analytics').classList.toggle('hidden', view !== 'analytics');
-        document.getElementById('nav-leads').className = `w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${view === 'leads' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'text-slate-400 hover:bg-slate-800'}`;
-        document.getElementById('nav-analytics').className = `w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${view === 'analytics' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'text-slate-400 hover:bg-slate-800'}`;
+        document.getElementById('nav-leads').className = `w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all text-sm ${view === 'leads' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'text-slate-400 hover:bg-slate-800'}`;
+        document.getElementById('nav-analytics').className = `w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all text-sm ${view === 'analytics' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'text-slate-400 hover:bg-slate-800'}`;
         if(view === 'analytics') setTimeout(renderAnalytics, 50);
         lucide.createIcons();
     }
@@ -257,16 +260,13 @@
         list.innerHTML = filtered.length ? filtered.map(lead => {
             const profit = lead.price - lead.cost;
             return `
-            <div class="flex flex-col md:grid md:grid-cols-12 gap-4 items-start md:items-center bg-white rounded-2xl p-5 card-shadow border ${isEditMode ? 'border-blue-400' : 'border-transparent'}">
-                <div class="w-full md:col-span-4 flex items-center gap-4">
-                    <div class="w-10 h-10 shrink-0 rounded-xl ${lead.status === '成約' ? 'bg-emerald-50 text-emerald-500' : 'bg-slate-100 text-slate-400'} flex items-center justify-center">
+            <div class="flex flex-col md:grid md:grid-cols-12 gap-3 md:gap-4 items-start md:items-center bg-white rounded-2xl p-4 md:p-5 card-shadow border ${isEditMode ? 'border-blue-400' : 'border-transparent'}">
+                <div class="w-full md:col-span-4 flex items-center gap-3 md:gap-4">
+                    <div class="w-9 h-9 md:w-10 md:h-10 shrink-0 rounded-xl ${lead.status === '成約' ? 'bg-emerald-50 text-emerald-500' : 'bg-slate-100 text-slate-400'} flex items-center justify-center">
                         <i data-lucide="briefcase" size="18"></i>
                     </div>
                     <div class="flex-1 min-w-0">
-                        ${isEditMode ? `<input class="edit-input font-bold" value="${lead.name}" oninput="updateLead(${lead.id}, 'name', this.value)">` : `<p class="text-sm font-bold truncate">${lead.name}</p>`}
-                    </div>
-                    <div class="md:hidden">
-                        ${isEditMode ? `<button onclick="deleteLead(${lead.id})" class="text-slate-300 hover:text-red-500 p-2"><i data-lucide="trash-2" size="16"></i></button>` : ''}
+                        ${isEditMode ? `<input class="edit-input font-bold" value="${lead.name}" oninput="updateLead(${lead.id}, 'name', this.value)">` : `<p class="text-sm font-bold truncate text-slate-800">${lead.name}</p>`}
                     </div>
                 </div>
                 <div class="w-full md:col-span-2 flex md:justify-center">
@@ -274,11 +274,11 @@
                 </div>
                 <div class="w-full grid grid-cols-2 md:contents gap-2">
                     <div class="md:col-span-2 md:text-right">
-                        <p class="text-[10px] md:hidden text-slate-400 font-bold uppercase mb-1">売上</p>
+                        <p class="text-[10px] md:hidden text-slate-400 font-bold uppercase mb-0.5">売上</p>
                         ${isEditMode ? `<input type="number" value="${lead.price}" oninput="updateLead(${lead.id}, 'price', Number(this.value))" class="edit-input text-right">` : `<span class="text-sm font-bold amount-font">¥${fmt(lead.price)}</span>`}
                     </div>
                     <div class="md:col-span-2 md:text-right">
-                        <p class="text-[10px] md:hidden text-slate-400 font-bold uppercase mb-1">原価</p>
+                        <p class="text-[10px] md:hidden text-slate-400 font-bold uppercase mb-0.5">原価</p>
                         ${isEditMode ? `<input type="number" value="${lead.cost}" oninput="updateLead(${lead.id}, 'cost', Number(this.value))" class="edit-input text-right">` : `<span class="text-sm text-slate-500 amount-font">¥${fmt(lead.cost)}</span>`}
                     </div>
                 </div>
@@ -286,9 +286,7 @@
                     <p class="text-[10px] md:hidden text-slate-400 font-bold uppercase">粗利</p>
                     <div class="flex items-center gap-3">
                         <span class="text-sm font-bold ${profit >= 0 ? 'text-blue-600' : 'text-red-600'} amount-font">¥${fmt(profit)}</span>
-                        <div class="hidden md:block">
-                            ${isEditMode ? `<button onclick="deleteLead(${lead.id})" class="text-slate-300 hover:text-red-500 transition-all"><i data-lucide="trash-2" size="14"></i></button>` : ''}
-                        </div>
+                        ${isEditMode ? `<button onclick="deleteLead(${lead.id})" class="text-slate-300 hover:text-red-500 transition-all p-1"><i data-lucide="trash-2" size="14"></i></button>` : ''}
                     </div>
                 </div>
             </div>`;
@@ -338,18 +336,11 @@
             data: {
                 labels: months.map(m => m.split('-')[1] + '月'),
                 datasets: [
-                    { label: '利益額 (粗利)', data: profitT, backgroundColor: '#3b82f6', borderRadius: 6, yAxisID: 'y' },
+                    { label: '利益額', data: profitT, backgroundColor: '#3b82f6', borderRadius: 6, yAxisID: 'y' },
                     { label: '成約率 (%)', data: winRateT, backgroundColor: 'rgba(16, 185, 129, 0.7)', borderRadius: 6, yAxisID: 'y1' }
                 ]
             },
-            options: { 
-                responsive: true, 
-                maintainAspectRatio: false, 
-                scales: { 
-                    y: { type: 'linear', position: 'left', beginAtZero: true, title: { display: true, text: '利益額 (円)' } }, 
-                    y1: { type: 'linear', position: 'right', min: 0, max: 100, title: { display: true, text: '成約率 (%)' }, grid: { drawOnChartArea: false } } 
-                } 
-            }
+            options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true }, y1: { position: 'right', max: 100, beginAtZero: true, grid: { drawOnChartArea: false } } } }
         });
 
         if (charts.financial) charts.financial.destroy();
@@ -377,7 +368,6 @@
     async function deleteLead(id) {
         if(!confirm('削除しますか？')) return;
         const { error } = await _supabase.from('leads').delete().eq('id', id);
-        if (error) { alert('削除に失敗しました'); return; }
         leads = leads.filter(l => l.id !== id);
         saveToLocalStorage();
         refreshUI();
@@ -404,8 +394,6 @@
 
     window.onload = () => {
         loadData();
-        updateMonthSelector();
-        refreshUI();
         document.getElementById('toggle-edit-mode').onclick = () => {
             isEditMode = !isEditMode;
             document.getElementById('edit-mode-text').innerText = isEditMode ? '完了' : '編集モード切替';
