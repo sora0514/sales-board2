@@ -175,246 +175,237 @@
 
     <script>
     const SUPABASE_URL = 'https://cliiqahxazbfdqxrwzvp.supabase.co'; 
+    const SUPABASE_KEY = 'sb_publishable_JXuDTqzZANTAxCYEjBjQWA_tmqXjZYc'; 
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
     const STATUS_STEPS = ['アポイント済', '現調済', '見積提示', '成約'];
-    const SUPABASE_KEY = 'sb_publishable_JXuDTqzZANTAxCYEjBjQWA_tmqXjZYc';
-        const STATUS_STEPS = ['アポイント済', '現調済', '見積提示', '成約'];
-        const STATUS_THEMES = {
-            'アポイント済': 'bg-slate-100 text-slate-600 border border-slate-200',
-            '現調済': 'bg-amber-100 text-amber-700 border border-amber-200',
-            '見積提示': 'bg-blue-100 text-blue-700 border border-blue-200',
-            '成約': 'bg-emerald-100 text-emerald-700 border border-emerald-200'
-        };
+    const STATUS_THEMES = {
+        'アポイント済': 'bg-slate-100 text-slate-600 border border-slate-200',
+        '現調済': 'bg-amber-100 text-amber-700 border border-amber-200',
+        '見積提示': 'bg-blue-100 text-blue-700 border border-blue-200',
+        '成約': 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+    };
 
-        const STORAGE_KEY = 'sales_board_pro_data';
-        let leads = [];
-        let currentView = 'leads';
-        let selectedMonth = new Date().toISOString().slice(0, 7);
-        let isEditMode = false;
-        let searchQuery = '';
-        let charts = { financial: null, performanceTrend: null };
+    const STORAGE_KEY = 'sales_board_pro_data';
+    let leads = [];
+    let currentView = 'leads';
+    let selectedMonth = new Date().toISOString().slice(0, 7);
+    let isEditMode = false;
+    let searchQuery = '';
+    let charts = { financial: null, performanceTrend: null };
 
-        const fmt = n => new Intl.NumberFormat('ja-JP').format(n);
+    const fmt = n => new Intl.NumberFormat('ja-JP').format(n);
 
-        async function loadData() {
-            const { data, error } = await _supabase
-                .from('leads')
-                .select('*')
-                .order('id', { ascending: false });
+    // --- データの読み込み (Supabaseから取得) ---
+    async function loadData() {
+        const { data, error } = await _supabase
+            .from('leads')
+            .select('*')
+            .order('id', { ascending: false });
 
-            if (error) {
-                console.error('データ取得エラー:', error);
-                const saved = localStorage.getItem(STORAGE_KEY);
-                if (saved) leads = JSON.parse(saved).leads || [];
-            } else {
-                leads = data || [];
-            }
-            refreshUI();
+        if (error) {
+            console.error('データ取得エラー:', error);
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) leads = JSON.parse(saved).leads || [];
+        } else {
+            leads = data || [];
         }
+        refreshUI();
+    }
 
-        async function saveToLocalStorage() {
-            const { error } = await _supabase
-                .from('leads')
-                .upsert(leads);
+    // --- データの保存 (Supabaseに保存) ---
+    async function saveToLocalStorage() {
+        const { error } = await _supabase
+            .from('leads')
+            .upsert(leads);
 
-            localStorage.setItem(STORAGE_KEY, JSON.stringify({ leads }));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ leads }));
 
-            const el = document.getElementById('save-indicator');
-            if (el) {
-                el.classList.add('show');
-                setTimeout(() => el.classList.remove('show'), 2000);
+        const el = document.getElementById('save-indicator');
+        if (el) {
+            el.classList.add('show');
+            setTimeout(() => el.classList.remove('show'), 2000);
+        }
+        if (error) console.error('保存エラー:', error);
+    }
+
+    function refreshUI() {
+        renderLeads();
+        updateSidebar();
+        updateMonthSelector();
+        if(currentView === 'analytics') renderAnalytics();
+        lucide.createIcons();
+    }
+
+    function switchView(view) {
+        currentView = view;
+        document.getElementById('view-leads').classList.toggle('hidden', view !== 'leads');
+        document.getElementById('view-analytics').classList.toggle('hidden', view !== 'analytics');
+        document.getElementById('nav-leads').className = `w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${view === 'leads' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'text-slate-400 hover:bg-slate-800'}`;
+        document.getElementById('nav-analytics').className = `w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${view === 'analytics' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'text-slate-400 hover:bg-slate-800'}`;
+        if(view === 'analytics') setTimeout(renderAnalytics, 50);
+        lucide.createIcons();
+    }
+
+    function renderLeads() {
+        const list = document.getElementById('leads-list');
+        const filtered = leads.filter(l => {
+            const q = searchQuery.toLowerCase();
+            return (q === '' || l.name.toLowerCase().includes(q) || l.status.toLowerCase().includes(q)) && (searchQuery !== '' || l.month === selectedMonth);
+        }).sort((a, b) => b.id - a.id);
+        
+        list.innerHTML = filtered.length ? filtered.map(lead => {
+            const profit = lead.price - lead.cost;
+            return `
+            <div class="grid grid-cols-12 gap-4 items-center bg-white rounded-2xl p-5 card-shadow border ${isEditMode ? 'border-blue-400' : 'border-transparent'}">
+                <div class="col-span-4 flex items-center gap-4">
+                    <div class="w-10 h-10 rounded-xl ${lead.status === '成約' ? 'bg-emerald-50 text-emerald-500' : 'bg-slate-100 text-slate-400'} flex items-center justify-center">
+                        <i data-lucide="briefcase" size="18"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        ${isEditMode ? `<input class="edit-input font-bold" value="${lead.name}" oninput="updateLead(${lead.id}, 'name', this.value)">` : `<p class="text-sm font-bold truncate">${lead.name}</p>`}
+                    </div>
+                </div>
+                <div class="col-span-2 flex justify-center">
+                    ${isEditMode ? `<select onchange="updateLead(${lead.id}, 'status', this.value)" class="edit-input font-bold text-xs">${STATUS_STEPS.map(s => `<option value="${s}" ${s === lead.status ? 'selected' : ''}>${s}</option>`).join('')}</select>` : `<span class="status-badge ${STATUS_THEMES[lead.status]}">${lead.status}</span>`}
+                </div>
+                <div class="col-span-2 text-right">${isEditMode ? `<input type="number" value="${lead.price}" oninput="updateLead(${lead.id}, 'price', Number(this.value))" class="edit-input text-right">` : `<span class="text-sm font-bold amount-font">¥${fmt(lead.price)}</span>`}</div>
+                <div class="col-span-2 text-right">${isEditMode ? `<input type="number" value="${lead.cost}" oninput="updateLead(${lead.id}, 'cost', Number(this.value))" class="edit-input text-right">` : `<span class="text-sm text-slate-500 amount-font">¥${fmt(lead.cost)}</span>`}</div>
+                <div class="col-span-2 flex items-center justify-end gap-3">
+                    <span class="text-sm font-bold ${profit >= 0 ? 'text-blue-600' : 'text-red-600'} amount-font">¥${fmt(profit)}</span>
+                    ${isEditMode ? `<button onclick="deleteLead(${lead.id})" class="text-slate-300 hover:text-red-500 transition-all"><i data-lucide="trash-2" size="14"></i></button>` : ''}
+                </div>
+            </div>`;
+        }).join('') : `<div class="py-20 text-center text-slate-400 bg-white rounded-3xl border-2 border-dashed">データがありません</div>`;
+        lucide.createIcons();
+    }
+
+    function updateSidebar() {
+        const curLeads = leads.filter(l => l.month === selectedMonth);
+        const closed = curLeads.filter(l => l.status === '成約');
+        const sales = closed.reduce((sum, l) => sum + l.price, 0);
+        const profit = sales - closed.reduce((sum, l) => sum + l.cost, 0);
+        document.getElementById('summary-month-label').textContent = `${selectedMonth.replace('-', '年')}月分`;
+        document.getElementById('total-sales-sidebar').textContent = `¥${fmt(sales)}`;
+        document.getElementById('total-profit-sidebar').textContent = `¥${fmt(profit)}`;
+        document.getElementById('total-margin-pct-sidebar').textContent = (sales > 0 ? Math.round((profit / sales) * 100) : 0) + '%';
+        document.getElementById('funnel-container').innerHTML = STATUS_STEPS.map(step => `<div class="flex items-center justify-between px-2 py-1.5"><span class="text-xs font-bold text-slate-500">${step}</span><span class="text-xs font-bold text-white bg-slate-800 px-2 rounded">${curLeads.filter(l => l.status === step).length}</span></div>`).join('');
+    }
+
+    function renderAnalytics() {
+        const closed = leads.filter(l => l.status === '成約');
+        const totalSales = closed.reduce((s, l) => s + l.price, 0);
+        const totalCost = closed.reduce((s, l) => s + l.cost, 0);
+        const totalProfit = totalSales - totalCost;
+
+        document.getElementById('kpi-sales').innerText = `¥${fmt(totalSales)}`;
+        document.getElementById('kpi-total-profit').innerText = `¥${fmt(totalProfit)}`;
+        document.getElementById('kpi-avg-price').innerText = `¥${fmt(closed.length ? Math.round(totalSales / closed.length) : 0)}`;
+        document.getElementById('kpi-win-rate').innerText = (leads.length ? Math.round((closed.length / leads.length) * 100) : 0) + '%';
+
+        const months = Array.from(new Set(leads.map(l => l.month))).sort();
+        const salesT = [], profitT = [], winRateT = [];
+
+        months.forEach(m => {
+            const mL = leads.filter(l => l.month === m);
+            const mC = mL.filter(l => l.status === '成約');
+            const mS = mC.reduce((s, l) => s + l.price, 0);
+            const mP = mS - mC.reduce((s, l) => s + l.cost, 0);
+            salesT.push(mS);
+            profitT.push(mP);
+            winRateT.push(mL.length ? Math.round((mC.length / mL.length) * 100) : 0);
+        });
+
+        if (charts.performanceTrend) charts.performanceTrend.destroy();
+        charts.performanceTrend = new Chart(document.getElementById('performanceTrendChart'), {
+            type: 'bar',
+            data: {
+                labels: months.map(m => m.split('-')[1] + '月'),
+                datasets: [
+                    { label: '利益額 (粗利)', data: profitT, backgroundColor: '#3b82f6', borderRadius: 6, yAxisID: 'y' },
+                    { label: '成約率 (%)', data: winRateT, backgroundColor: 'rgba(16, 185, 129, 0.7)', borderRadius: 6, yAxisID: 'y1' }
+                ]
+            },
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false, 
+                scales: { 
+                    y: { type: 'linear', position: 'left', beginAtZero: true, title: { display: true, text: '利益額 (円)' } }, 
+                    y1: { type: 'linear', position: 'right', min: 0, max: 100, title: { display: true, text: '成約率 (%)' }, grid: { drawOnChartArea: false } } 
+                } 
             }
+        });
 
-            if (error) console.error('保存エラー:', error);
-        }        }
+        if (charts.financial) charts.financial.destroy();
+        charts.financial = new Chart(document.getElementById('financialChart'), {
+            type: 'bar',
+            data: {
+                labels: months.map(m => m.split('-')[1] + '月'),
+                datasets: [
+                    { label: '総売上', data: salesT, backgroundColor: '#cbd5e1', borderRadius: 4 },
+                    { label: '利益額', data: profitT, backgroundColor: '#334155', borderRadius: 4 }
+                ]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+    }
 
-        function refreshUI() {
+    let dbTimer;
+    function updateLead(id, field, val) {
+        leads = leads.map(l => l.id === id ? {...l, [field]: val} : l);
+        updateSidebar();
+        clearTimeout(dbTimer);
+        dbTimer = setTimeout(saveToLocalStorage, 500);
+    }
+
+    async function deleteLead(id) {
+        if(!confirm('削除しますか？')) return;
+        const { error } = await _supabase.from('leads').delete().eq('id', id);
+        if (error) { alert('削除に失敗しました'); return; }
+        leads = leads.filter(l => l.id !== id);
+        saveToLocalStorage();
+        refreshUI();
+    }
+
+    function addNewMonth() { document.getElementById('month-modal').classList.remove('hidden'); }
+    function closeMonthModal() { document.getElementById('month-modal').classList.add('hidden'); }
+    function confirmMonthAdd() {
+        const val = document.getElementById('new-month-input').value;
+        if(!val) return;
+        selectedMonth = val;
+        updateMonthSelector();
+        closeMonthModal();
+        refreshUI();
+        saveToLocalStorage();
+    }
+
+    function updateMonthSelector() {
+        const ms = Array.from(new Set(leads.map(l => l.month)));
+        if(!ms.includes(selectedMonth)) ms.push(selectedMonth);
+        ms.sort().reverse();
+        document.getElementById('month-selector').innerHTML = ms.map(m => `<option value="${m}" ${m === selectedMonth ? 'selected' : ''}>${m.replace('-', '年')}月分</option>`).join('');
+    }
+
+    window.onload = () => {
+        loadData();
+        updateMonthSelector();
+        refreshUI();
+        document.getElementById('toggle-edit-mode').onclick = () => {
+            isEditMode = !isEditMode;
+            document.getElementById('edit-mode-text').innerText = isEditMode ? '完了' : '編集モード切替';
+            document.getElementById('toggle-edit-mode').classList.toggle('bg-blue-600', isEditMode);
+            if (!isEditMode) saveToLocalStorage();
             renderLeads();
-            updateSidebar();
-            updateMonthSelector();
-            if(currentView === 'analytics') renderAnalytics();
-            lucide.createIcons();
-        }
-
-        function switchView(view) {
-            currentView = view;
-            document.getElementById('view-leads').classList.toggle('hidden', view !== 'leads');
-            document.getElementById('view-analytics').classList.toggle('hidden', view !== 'analytics');
-            document.getElementById('nav-leads').className = `w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${view === 'leads' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'text-slate-400 hover:bg-slate-800'}`;
-            document.getElementById('nav-analytics').className = `w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${view === 'analytics' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'text-slate-400 hover:bg-slate-800'}`;
-            if(view === 'analytics') setTimeout(renderAnalytics, 50);
-            lucide.createIcons();
-        }
-
-        function renderLeads() {
-            const list = document.getElementById('leads-list');
-            const filtered = leads.filter(l => {
-                const q = searchQuery.toLowerCase();
-                return (q === '' || l.name.toLowerCase().includes(q) || l.status.toLowerCase().includes(q)) && (searchQuery !== '' || l.month === selectedMonth);
-            }).sort((a, b) => b.id - a.id);
-            
-            list.innerHTML = filtered.length ? filtered.map(lead => {
-                const profit = lead.price - lead.cost;
-                return `
-                <div class="grid grid-cols-12 gap-4 items-center bg-white rounded-2xl p-5 card-shadow border ${isEditMode ? 'border-blue-400' : 'border-transparent'}">
-                    <div class="col-span-4 flex items-center gap-4">
-                        <div class="w-10 h-10 rounded-xl ${lead.status === '成約' ? 'bg-emerald-50 text-emerald-500' : 'bg-slate-100 text-slate-400'} flex items-center justify-center">
-                            <i data-lucide="briefcase" size="18"></i>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            ${isEditMode ? `<input class="edit-input font-bold" value="${lead.name}" oninput="updateLead(${lead.id}, 'name', this.value)">` : `<p class="text-sm font-bold truncate">${lead.name}</p>`}
-                        </div>
-                    </div>
-                    <div class="col-span-2 flex justify-center">
-                        ${isEditMode ? `<select onchange="updateLead(${lead.id}, 'status', this.value)" class="edit-input font-bold text-xs">${STATUS_STEPS.map(s => `<option value="${s}" ${s === lead.status ? 'selected' : ''}>${s}</option>`).join('')}</select>` : `<span class="status-badge ${STATUS_THEMES[lead.status]}">${lead.status}</span>`}
-                    </div>
-                    <div class="col-span-2 text-right">${isEditMode ? `<input type="number" value="${lead.price}" oninput="updateLead(${lead.id}, 'price', Number(this.value))" class="edit-input text-right">` : `<span class="text-sm font-bold amount-font">¥${fmt(lead.price)}</span>`}</div>
-                    <div class="col-span-2 text-right">${isEditMode ? `<input type="number" value="${lead.cost}" oninput="updateLead(${lead.id}, 'cost', Number(this.value))" class="edit-input text-right">` : `<span class="text-sm text-slate-500 amount-font">¥${fmt(lead.cost)}</span>`}</div>
-                    <div class="col-span-2 flex items-center justify-end gap-3">
-                        <span class="text-sm font-bold ${profit >= 0 ? 'text-blue-600' : 'text-red-600'} amount-font">¥${fmt(profit)}</span>
-                        ${isEditMode ? `<button onclick="deleteLead(${lead.id})" class="text-slate-300 hover:text-red-500 transition-all"><i data-lucide="trash-2" size="14"></i></button>` : ''}
-                    </div>
-                </div>`;
-            }).join('') : `<div class="py-20 text-center text-slate-400 bg-white rounded-3xl border-2 border-dashed">データがありません</div>`;
-            lucide.createIcons();
-        }
-
-        function updateSidebar() {
-            const curLeads = leads.filter(l => l.month === selectedMonth);
-            const closed = curLeads.filter(l => l.status === '成約');
-            const sales = closed.reduce((sum, l) => sum + l.price, 0);
-            const profit = sales - closed.reduce((sum, l) => sum + l.cost, 0);
-            document.getElementById('summary-month-label').textContent = `${selectedMonth.replace('-', '年')}月分`;
-            document.getElementById('total-sales-sidebar').textContent = `¥${fmt(sales)}`;
-            document.getElementById('total-profit-sidebar').textContent = `¥${fmt(profit)}`;
-            document.getElementById('total-margin-pct-sidebar').textContent = (sales > 0 ? Math.round((profit / sales) * 100) : 0) + '%';
-            document.getElementById('funnel-container').innerHTML = STATUS_STEPS.map(step => `<div class="flex items-center justify-between px-2 py-1.5"><span class="text-xs font-bold text-slate-500">${step}</span><span class="text-xs font-bold text-white bg-slate-800 px-2 rounded">${curLeads.filter(l => l.status === step).length}</span></div>`).join('');
-        }
-
-        function renderAnalytics() {
-            const closed = leads.filter(l => l.status === '成約');
-            const totalSales = closed.reduce((s, l) => s + l.price, 0);
-            const totalCost = closed.reduce((s, l) => s + l.cost, 0);
-            const totalProfit = totalSales - totalCost;
-
-            document.getElementById('kpi-sales').innerText = `¥${fmt(totalSales)}`;
-            document.getElementById('kpi-total-profit').innerText = `¥${fmt(totalProfit)}`;
-            document.getElementById('kpi-avg-price').innerText = `¥${fmt(closed.length ? Math.round(totalSales / closed.length) : 0)}`;
-            document.getElementById('kpi-win-rate').innerText = (leads.length ? Math.round((closed.length / leads.length) * 100) : 0) + '%';
-
-            const months = Array.from(new Set(leads.map(l => l.month))).sort();
-            const salesT = [], profitT = [], winRateT = [];
-
-            months.forEach(m => {
-                const mL = leads.filter(l => l.month === m);
-                const mC = mL.filter(l => l.status === '成約');
-                const mS = mC.reduce((s, l) => s + l.price, 0);
-                const mP = mS - mC.reduce((s, l) => s + l.cost, 0);
-                salesT.push(mS);
-                profitT.push(mP);
-                winRateT.push(mL.length ? Math.round((mC.length / mL.length) * 100) : 0);
-            });
-
-            if (charts.performanceTrend) charts.performanceTrend.destroy();
-            charts.performanceTrend = new Chart(document.getElementById('performanceTrendChart'), {
-                type: 'bar',
-                data: {
-                    labels: months.map(m => m.split('-')[1] + '月'),
-                    datasets: [
-                        { label: '利益額 (粗利)', data: profitT, backgroundColor: '#3b82f6', borderRadius: 6, yAxisID: 'y' },
-                        { label: '成約率 (%)', data: winRateT, backgroundColor: 'rgba(16, 185, 129, 0.7)', borderRadius: 6, yAxisID: 'y1' }
-                    ]
-                },
-                options: { 
-                    responsive: true, 
-                    maintainAspectRatio: false, 
-                    scales: { 
-                        y: { type: 'linear', position: 'left', beginAtZero: true, title: { display: true, text: '利益額 (円)' } }, 
-                        y1: { type: 'linear', position: 'right', min: 0, max: 100, title: { display: true, text: '成約率 (%)' }, grid: { drawOnChartArea: false } } 
-                    } 
-                }
-            });
-
-            if (charts.financial) charts.financial.destroy();
-            charts.financial = new Chart(document.getElementById('financialChart'), {
-                type: 'bar',
-                data: {
-                    labels: months.map(m => m.split('-')[1] + '月'),
-                    datasets: [
-                        { label: '総売上', data: salesT, backgroundColor: '#cbd5e1', borderRadius: 4 },
-                        { label: '利益額', data: profitT, backgroundColor: '#334155', borderRadius: 4 }
-                    ]
-                },
-                options: { responsive: true, maintainAspectRatio: false }
-            });
-        }
-
-        let dbTimer;
-        function updateLead(id, field, val) {
-            leads = leads.map(l => l.id === id ? {...l, [field]: val} : l);
-            updateSidebar();
-            clearTimeout(dbTimer);
-            dbTimer = setTimeout(saveToLocalStorage, 500);
-        }
-
-        async function deleteLead(id) {
-            if(!confirm('削除しますか？')) return;
-
-            const { error } = await _supabase
-                .from('leads')
-                .delete()
-                .eq('id', id);
-
-            if (error) {
-                console.error('削除エラー:', error);
-                alert('削除に失敗しました');
-                return;
-            }
-
-            leads = leads.filter(l => l.id !== id);
-            saveToLocalStorage(); 
-            refreshUI();
-        }
-
-        function addNewMonth() { document.getElementById('month-modal').classList.remove('hidden'); }
-        function closeMonthModal() { document.getElementById('month-modal').classList.add('hidden'); }
-        function confirmMonthAdd() {
-            const val = document.getElementById('new-month-input').value;
-            if(!val) return;
-            selectedMonth = val;
-            updateMonthSelector();
-            closeMonthModal();
-            refreshUI();
-            saveToLocalStorage();
-        }
-
-        function updateMonthSelector() {
-            const ms = Array.from(new Set(leads.map(l => l.month)));
-            if(!ms.includes(selectedMonth)) ms.push(selectedMonth);
-            ms.sort().reverse();
-            document.getElementById('month-selector').innerHTML = ms.map(m => `<option value="${m}" ${m === selectedMonth ? 'selected' : ''}>${m.replace('-', '年')}月分</option>`).join('');
-        }
-
-        window.onload = () => {
-            loadData();
-            updateMonthSelector();
-            refreshUI();
-            document.getElementById('toggle-edit-mode').onclick = () => {
-                isEditMode = !isEditMode;
-                document.getElementById('edit-mode-text').innerText = isEditMode ? '完了' : '編集モード切替';
-                document.getElementById('toggle-edit-mode').classList.toggle('bg-blue-600', isEditMode);
-                if (!isEditMode) saveToLocalStorage();
-                renderLeads();
-            };
-            document.getElementById('add-lead-btn').onclick = () => {
-                leads.unshift({ id: Date.now(), name: '新規案件', status: 'アポイント済', price: 0, cost: 0, month: selectedMonth });
-                isEditMode = true;
-                saveToLocalStorage();
-                refreshUI();
-            };
-            document.getElementById('search-input').oninput = (e) => { searchQuery = e.target.value; renderLeads(); };
-            document.getElementById('month-selector').onchange = (e) => { selectedMonth = e.target.value; searchQuery = ''; document.getElementById('search-input').value = ''; refreshUI(); };
         };
+        document.getElementById('add-lead-btn').onclick = () => {
+            leads.unshift({ id: Date.now(), name: '新規案件', status: 'アポイント済', price: 0, cost: 0, month: selectedMonth });
+            isEditMode = true;
+            saveToLocalStorage();
+            refreshUI();
+        };
+        document.getElementById('search-input').oninput = (e) => { searchQuery = e.target.value; renderLeads(); };
+        document.getElementById('month-selector').onchange = (e) => { selectedMonth = e.target.value; searchQuery = ''; document.getElementById('search-input').value = ''; refreshUI(); };
+    };
     </script>
 </body>
 </html>
