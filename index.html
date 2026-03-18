@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>営業改善進捗ボード PRO v3.2 (Supabase Sync)</title>
+    <title>営業改善進捗ボード PRO v3.1</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+JP:wght@400;700&display=swap');
         body { font-family: 'Inter', 'Noto Sans JP', sans-serif; }
@@ -27,6 +27,8 @@
 </head>
 <body class="bg-slate-50 text-slate-900 overflow-hidden">
     <div id="app" class="flex h-screen overflow-hidden">
+        
+        <!-- Sidebar -->
         <aside class="w-72 sidebar-dark text-slate-300 flex flex-col shrink-0 z-20 shadow-2xl">
             <div class="flex-1 overflow-y-auto custom-scrollbar p-8">
                 <div class="flex items-center gap-3 text-white mb-10">
@@ -35,6 +37,7 @@
                     </div>
                     <h1 class="font-bold text-xl tracking-tight">SalesBoard <span class="text-blue-500">PRO</span></h1>
                 </div>
+
                 <nav class="mb-10 space-y-1">
                     <p class="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-3 px-2">Navigation</p>
                     <button onclick="switchView('leads')" id="nav-leads" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-blue-600 text-white font-bold transition-all shadow-lg shadow-blue-500/20">
@@ -44,6 +47,7 @@
                         <i data-lucide="bar-chart-3" size="18"></i> <span>トレンド分析</span>
                     </button>
                 </nav>
+
                 <div id="sidebar-summary" class="bg-slate-800/50 rounded-2xl p-6 border border-slate-700/50 mb-8">
                     <p id="summary-month-label" class="text-xs text-slate-400 font-bold mb-4 tracking-widest uppercase">Target Month</p>
                     <div class="space-y-4">
@@ -63,11 +67,13 @@
                         </div>
                     </div>
                 </div>
+
                 <nav id="sidebar-funnel" class="pb-4">
                     <p class="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-4 px-2">Current Funnel</p>
                     <div id="funnel-container" class="space-y-1"></div>
                 </nav>
             </div>
+
             <div class="p-6 bg-slate-900/80 border-t border-slate-800 backdrop-blur-sm">
                 <button id="toggle-edit-mode" class="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm font-bold transition-all border border-slate-700 text-slate-300 shadow-lg">
                     <i data-lucide="edit-3" size="16"></i> <span id="edit-mode-text">編集モード切替</span>
@@ -75,6 +81,7 @@
             </div>
         </aside>
 
+        <!-- Main Content -->
         <main class="flex-1 flex flex-col min-w-0 bg-slate-50 overflow-hidden">
             <header class="h-20 px-10 flex items-center justify-between bg-white border-b border-slate-200 shrink-0">
                 <div class="flex items-center gap-4">
@@ -89,7 +96,7 @@
                     </div>
                     <div id="save-indicator" class="save-indicator flex items-center gap-2 text-[10px] font-bold text-slate-400 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-200">
                         <i data-lucide="cloud-check" size="12" class="text-emerald-500"></i>
-                        <span id="save-status-text">クラウド同期済み</span>
+                        <span>自動保存済み</span>
                     </div>
                 </div>
                 <button id="add-lead-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 shadow-lg shadow-blue-500/20">
@@ -98,6 +105,8 @@
             </header>
 
             <div id="content-scroll" class="flex-1 overflow-y-auto p-10 custom-scrollbar">
+                
+                <!-- View 1: Leads List -->
                 <div id="view-leads" class="max-w-6xl mx-auto space-y-6">
                     <div class="grid grid-cols-12 gap-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">
                         <div class="col-span-4">Project Details</div>
@@ -109,6 +118,7 @@
                     <div id="leads-list" class="space-y-3"></div>
                 </div>
 
+                <!-- View 2: Analytics -->
                 <div id="view-analytics" class="max-w-6xl mx-auto hidden space-y-8 pb-10">
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <div class="metric-card shadow-sm border-l-4 border-l-slate-800">
@@ -128,11 +138,21 @@
                             <span id="kpi-win-rate" class="text-2xl font-black amount-font text-emerald-600">--%</span>
                         </div>
                     </div>
+
                     <div class="space-y-6">
-                        <div class="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm text-center">
+                        <div class="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm">
+                            <div class="flex justify-between items-center mb-8">
+                                <h3 class="font-bold text-slate-800 flex items-center gap-2 text-sm uppercase tracking-wider">
+                                    <i data-lucide="bar-chart-horizontal" size="18" class="text-blue-600"></i> 月別：利益額(粗利) ＆ 成約率実績 (棒グラフ)
+                                </h3>
+                            </div>
                             <div class="h-96 w-full"><canvas id="performanceTrendChart"></canvas></div>
                         </div>
+
                         <div class="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm">
+                            <h3 class="font-bold text-slate-800 mb-6 flex items-center gap-2 text-sm uppercase tracking-wider">
+                                <i data-lucide="trending-up" size="18" class="text-slate-400"></i> 月別：収益・利益推移
+                            </h3>
                             <div class="h-64 w-full"><canvas id="financialChart"></canvas></div>
                         </div>
                     </div>
@@ -141,6 +161,7 @@
         </main>
     </div>
 
+    <!-- Month Modal -->
     <div id="month-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center hidden">
         <div class="bg-white p-8 rounded-3xl shadow-2xl w-96">
             <h3 class="text-xl font-bold mb-4">表示月の追加</h3>
@@ -153,12 +174,10 @@
     </div>
 
     <script>
-        // --- 1. Supabase 設定 (ここをあなたの情報に書き換える) ---
-        const SUPABASE_URL = 'https://cliiqahxazbfdqxrwzvp.supabase.co';
-        const SUPABASE_KEY = 'sb_publishable_JXuDTqzZANTAxCYEjBjQWA_tmqXjZYc'; // あなたの公開キー
-        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-        // --- 2. 定数 & 状態 ---
+    const SUPABASE_URL = 'https://cliiqahxazbfdqxrwzvp.supabase.co'; 
+    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const STATUS_STEPS = ['アポイント済', '現調済', '見積提示', '成約'];
+    const SUPABASE_KEY = 'sb_publishable_JXuDTqzZANTAxCYEjBjQWA_tmqXjZYc';
         const STATUS_STEPS = ['アポイント済', '現調済', '見積提示', '成約'];
         const STATUS_THEMES = {
             'アポイント済': 'bg-slate-100 text-slate-600 border border-slate-200',
@@ -167,6 +186,7 @@
             '成約': 'bg-emerald-100 text-emerald-700 border border-emerald-200'
         };
 
+        const STORAGE_KEY = 'sales_board_pro_data';
         let leads = [];
         let currentView = 'leads';
         let selectedMonth = new Date().toISOString().slice(0, 7);
@@ -176,67 +196,37 @@
 
         const fmt = n => new Intl.NumberFormat('ja-JP').format(n);
 
-        // --- 3. Supabase 通信ロジック ---
-        async function loadLeadsFromDB() {
-            showSaveIndicator('読み込み中...', false);
+        async function loadData() {
             const { data, error } = await _supabase
                 .from('leads')
                 .select('*')
                 .order('id', { ascending: false });
 
             if (error) {
-                console.error('Error loading:', error);
-                alert('データの読み込みに失敗しました。');
+                console.error('データ取得エラー:', error);
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (saved) leads = JSON.parse(saved).leads || [];
             } else {
                 leads = data || [];
-                // 存在する最新の月を選択
-                if (leads.length > 0) {
-                    const months = Array.from(new Set(leads.map(l => l.month))).sort().reverse();
-                    if (!months.includes(selectedMonth)) selectedMonth = months[0];
-                }
-                refreshUI();
-                showSaveIndicator('同期済み', true);
             }
+            refreshUI();
         }
 
-        async function syncLeadToDB(lead) {
-            showSaveIndicator('保存中...', false);
-            // IDが10桁（Date.now()などで生成）以上なら新規作成、それ以外なら更新
-            const isNew = String(lead.id).length > 10; 
-            
+        async function saveToLocalStorage() {
             const { error } = await _supabase
                 .from('leads')
-                .upsert({
-                    id: isNew ? undefined : lead.id, // 新規なら自動採番
-                    name: lead.name,
-                    status: lead.status,
-                    price: lead.price,
-                    cost: lead.cost,
-                    month: lead.month
-                });
+                .upsert(leads);
 
-            if (error) {
-                console.error('Sync error:', error);
-            } else {
-                // 保存後に再読み込みしてIDを確定させる
-                if(isNew) await loadLeadsFromDB();
-                showSaveIndicator('保存完了', true);
-            }
-        }
+            localStorage.setItem(STORAGE_KEY, JSON.stringify({ leads }));
 
-        async function deleteLeadFromDB(id) {
-            const { error } = await _supabase.from('leads').delete().eq('id', id);
-            if (error) console.error('Delete error:', error);
-            await loadLeadsFromDB();
-        }
-
-        // --- 4. UI 表示ロジック ---
-        function showSaveIndicator(text, autoHide) {
             const el = document.getElementById('save-indicator');
-            document.getElementById('save-status-text').innerText = text;
-            el.classList.add('show');
-            if(autoHide) setTimeout(() => el.classList.remove('show'), 2000);
-        }
+            if (el) {
+                el.classList.add('show');
+                setTimeout(() => el.classList.remove('show'), 2000);
+            }
+
+            if (error) console.error('保存エラー:', error);
+        }        }
 
         function refreshUI() {
             renderLeads();
@@ -246,14 +236,22 @@
             lucide.createIcons();
         }
 
+        function switchView(view) {
+            currentView = view;
+            document.getElementById('view-leads').classList.toggle('hidden', view !== 'leads');
+            document.getElementById('view-analytics').classList.toggle('hidden', view !== 'analytics');
+            document.getElementById('nav-leads').className = `w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${view === 'leads' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'text-slate-400 hover:bg-slate-800'}`;
+            document.getElementById('nav-analytics').className = `w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${view === 'analytics' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'text-slate-400 hover:bg-slate-800'}`;
+            if(view === 'analytics') setTimeout(renderAnalytics, 50);
+            lucide.createIcons();
+        }
+
         function renderLeads() {
             const list = document.getElementById('leads-list');
             const filtered = leads.filter(l => {
                 const q = searchQuery.toLowerCase();
-                const matchSearch = (q === '' || l.name.toLowerCase().includes(q) || l.status.toLowerCase().includes(q));
-                const matchMonth = (l.month === selectedMonth);
-                return matchSearch && (searchQuery !== '' ? true : matchMonth);
-            });
+                return (q === '' || l.name.toLowerCase().includes(q) || l.status.toLowerCase().includes(q)) && (searchQuery !== '' || l.month === selectedMonth);
+            }).sort((a, b) => b.id - a.id);
             
             list.innerHTML = filtered.length ? filtered.map(lead => {
                 const profit = lead.price - lead.cost;
@@ -264,24 +262,23 @@
                             <i data-lucide="briefcase" size="18"></i>
                         </div>
                         <div class="flex-1 min-w-0">
-                            ${isEditMode ? `<input class="edit-input font-bold" value="${lead.name}" onchange="updateLead(${lead.id}, 'name', this.value)">` : `<p class="text-sm font-bold truncate">${lead.name}</p>`}
+                            ${isEditMode ? `<input class="edit-input font-bold" value="${lead.name}" oninput="updateLead(${lead.id}, 'name', this.value)">` : `<p class="text-sm font-bold truncate">${lead.name}</p>`}
                         </div>
                     </div>
                     <div class="col-span-2 flex justify-center">
                         ${isEditMode ? `<select onchange="updateLead(${lead.id}, 'status', this.value)" class="edit-input font-bold text-xs">${STATUS_STEPS.map(s => `<option value="${s}" ${s === lead.status ? 'selected' : ''}>${s}</option>`).join('')}</select>` : `<span class="status-badge ${STATUS_THEMES[lead.status]}">${lead.status}</span>`}
                     </div>
-                    <div class="col-span-2 text-right">${isEditMode ? `<input type="number" value="${lead.price}" onchange="updateLead(${lead.id}, 'price', Number(this.value))" class="edit-input text-right">` : `<span class="text-sm font-bold amount-font">¥${fmt(lead.price)}</span>`}</div>
-                    <div class="col-span-2 text-right">${isEditMode ? `<input type="number" value="${lead.cost}" onchange="updateLead(${lead.id}, 'cost', Number(this.value))" class="edit-input text-right">` : `<span class="text-sm text-slate-500 amount-font">¥${fmt(lead.cost)}</span>`}</div>
+                    <div class="col-span-2 text-right">${isEditMode ? `<input type="number" value="${lead.price}" oninput="updateLead(${lead.id}, 'price', Number(this.value))" class="edit-input text-right">` : `<span class="text-sm font-bold amount-font">¥${fmt(lead.price)}</span>`}</div>
+                    <div class="col-span-2 text-right">${isEditMode ? `<input type="number" value="${lead.cost}" oninput="updateLead(${lead.id}, 'cost', Number(this.value))" class="edit-input text-right">` : `<span class="text-sm text-slate-500 amount-font">¥${fmt(lead.cost)}</span>`}</div>
                     <div class="col-span-2 flex items-center justify-end gap-3">
                         <span class="text-sm font-bold ${profit >= 0 ? 'text-blue-600' : 'text-red-600'} amount-font">¥${fmt(profit)}</span>
                         ${isEditMode ? `<button onclick="deleteLead(${lead.id})" class="text-slate-300 hover:text-red-500 transition-all"><i data-lucide="trash-2" size="14"></i></button>` : ''}
                     </div>
                 </div>`;
-            }).join('') : `<div class="py-20 text-center text-slate-400 bg-white rounded-3xl border-2 border-dashed">案件がありません</div>`;
+            }).join('') : `<div class="py-20 text-center text-slate-400 bg-white rounded-3xl border-2 border-dashed">データがありません</div>`;
             lucide.createIcons();
         }
 
-        // (その他の更新・計算関数は既存を維持しつつ調整)
         function updateSidebar() {
             const curLeads = leads.filter(l => l.month === selectedMonth);
             const closed = curLeads.filter(l => l.status === '成約');
@@ -294,50 +291,11 @@
             document.getElementById('funnel-container').innerHTML = STATUS_STEPS.map(step => `<div class="flex items-center justify-between px-2 py-1.5"><span class="text-xs font-bold text-slate-500">${step}</span><span class="text-xs font-bold text-white bg-slate-800 px-2 rounded">${curLeads.filter(l => l.status === step).length}</span></div>`).join('');
         }
 
-        async function updateLead(id, field, val) {
-            const lead = leads.find(l => l.id === id);
-            if (lead) {
-                lead[field] = val;
-                await syncLeadToDB(lead);
-                refreshUI();
-            }
-        }
-
-        async function deleteLead(id) {
-            if(!confirm('案件を削除しますか？')) return;
-            await deleteLeadFromDB(id);
-        }
-
-        function switchView(view) {
-            currentView = view;
-            document.getElementById('view-leads').classList.toggle('hidden', view !== 'leads');
-            document.getElementById('view-analytics').classList.toggle('hidden', view !== 'analytics');
-            if(view === 'analytics') setTimeout(renderAnalytics, 50);
-            lucide.createIcons();
-        }
-
-        function updateMonthSelector() {
-            const ms = Array.from(new Set(leads.map(l => l.month)));
-            if(!ms.includes(selectedMonth)) ms.push(selectedMonth);
-            ms.sort().reverse();
-            document.getElementById('month-selector').innerHTML = ms.map(m => `<option value="${m}" ${m === selectedMonth ? 'selected' : ''}>${m.replace('-', '年')}月分</option>`).join('');
-        }
-
-        function addNewMonth() { document.getElementById('month-modal').classList.remove('hidden'); }
-        function closeMonthModal() { document.getElementById('month-modal').classList.add('hidden'); }
-        function confirmMonthAdd() {
-            const val = document.getElementById('new-month-input').value;
-            if(!val) return;
-            selectedMonth = val;
-            updateMonthSelector();
-            closeMonthModal();
-            refreshUI();
-        }
-
         function renderAnalytics() {
             const closed = leads.filter(l => l.status === '成約');
             const totalSales = closed.reduce((s, l) => s + l.price, 0);
-            const totalProfit = totalSales - closed.reduce((s, l) => s + l.cost, 0);
+            const totalCost = closed.reduce((s, l) => s + l.cost, 0);
+            const totalProfit = totalSales - totalCost;
 
             document.getElementById('kpi-sales').innerText = `¥${fmt(totalSales)}`;
             document.getElementById('kpi-total-profit').innerText = `¥${fmt(totalProfit)}`;
@@ -368,10 +326,11 @@
                     ]
                 },
                 options: { 
-                    responsive: true, maintainAspectRatio: false,
+                    responsive: true, 
+                    maintainAspectRatio: false, 
                     scales: { 
-                        y: { type: 'linear', position: 'left', beginAtZero: true }, 
-                        y1: { type: 'linear', position: 'right', min: 0, max: 100 } 
+                        y: { type: 'linear', position: 'left', beginAtZero: true, title: { display: true, text: '利益額 (円)' } }, 
+                        y1: { type: 'linear', position: 'right', min: 0, max: 100, title: { display: true, text: '成約率 (%)' }, grid: { drawOnChartArea: false } } 
                     } 
                 }
             });
@@ -390,27 +349,71 @@
             });
         }
 
-        // --- 5. 初期起動 ---
-        window.onload = async () => {
-            await loadLeadsFromDB();
-            
+        let dbTimer;
+        function updateLead(id, field, val) {
+            leads = leads.map(l => l.id === id ? {...l, [field]: val} : l);
+            updateSidebar();
+            clearTimeout(dbTimer);
+            dbTimer = setTimeout(saveToLocalStorage, 500);
+        }
+
+        async function deleteLead(id) {
+            if(!confirm('削除しますか？')) return;
+
+            const { error } = await _supabase
+                .from('leads')
+                .delete()
+                .eq('id', id);
+
+            if (error) {
+                console.error('削除エラー:', error);
+                alert('削除に失敗しました');
+                return;
+            }
+
+            leads = leads.filter(l => l.id !== id);
+            saveToLocalStorage(); 
+            refreshUI();
+        }
+
+        function addNewMonth() { document.getElementById('month-modal').classList.remove('hidden'); }
+        function closeMonthModal() { document.getElementById('month-modal').classList.add('hidden'); }
+        function confirmMonthAdd() {
+            const val = document.getElementById('new-month-input').value;
+            if(!val) return;
+            selectedMonth = val;
+            updateMonthSelector();
+            closeMonthModal();
+            refreshUI();
+            saveToLocalStorage();
+        }
+
+        function updateMonthSelector() {
+            const ms = Array.from(new Set(leads.map(l => l.month)));
+            if(!ms.includes(selectedMonth)) ms.push(selectedMonth);
+            ms.sort().reverse();
+            document.getElementById('month-selector').innerHTML = ms.map(m => `<option value="${m}" ${m === selectedMonth ? 'selected' : ''}>${m.replace('-', '年')}月分</option>`).join('');
+        }
+
+        window.onload = () => {
+            loadData();
+            updateMonthSelector();
+            refreshUI();
             document.getElementById('toggle-edit-mode').onclick = () => {
                 isEditMode = !isEditMode;
                 document.getElementById('edit-mode-text').innerText = isEditMode ? '完了' : '編集モード切替';
                 document.getElementById('toggle-edit-mode').classList.toggle('bg-blue-600', isEditMode);
+                if (!isEditMode) saveToLocalStorage();
                 renderLeads();
             };
-
-            document.getElementById('add-lead-btn').onclick = async () => {
-                const newLead = { id: Date.now(), name: '新規案件', status: 'アポイント済', price: 0, cost: 0, month: selectedMonth };
-                leads.unshift(newLead);
+            document.getElementById('add-lead-btn').onclick = () => {
+                leads.unshift({ id: Date.now(), name: '新規案件', status: 'アポイント済', price: 0, cost: 0, month: selectedMonth });
                 isEditMode = true;
+                saveToLocalStorage();
                 refreshUI();
-                await syncLeadToDB(newLead);
             };
-
             document.getElementById('search-input').oninput = (e) => { searchQuery = e.target.value; renderLeads(); };
-            document.getElementById('month-selector').onchange = (e) => { selectedMonth = e.target.value; refreshUI(); };
+            document.getElementById('month-selector').onchange = (e) => { selectedMonth = e.target.value; searchQuery = ''; document.getElementById('search-input').value = ''; refreshUI(); };
         };
     </script>
 </body>
