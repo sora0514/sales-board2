@@ -3,371 +3,308 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>営業改善進捗ボード PRO v3.3</title>
+    <title>営業改善進捗ボード PRO v3.4</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+JP:wght@400;700&display=swap');
-        body { font-family: 'Inter', 'Noto Sans JP', sans-serif; }
+        body { font-family: 'Inter', 'Noto Sans JP', sans-serif; height: 100vh; margin: 0; overflow: hidden; }
         .sidebar-dark { background-color: #0f172a; }
-        .amount-font { font-family: 'Inter', sans-serif; letter-spacing: -0.01em; }
+        .amount-font { font-family: 'Inter', sans-serif; }
+        /* スクロールバーのカスタマイズ */
         .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        .status-badge { padding: 2px 8px; border-radius: 9999px; font-size: 10px; font-weight: 700; white-space: nowrap; }
-        .edit-input { background: #f8fafc; border: 1px solid #e2e8f0; padding: 2px 6px; border-radius: 4px; font-size: 12px; width: 100%; }
+        /* 案件リストの横被り防止 */
+        .lead-row { min-width: 900px; }
+        .edit-input { background: #f8fafc; border: 1px solid #e2e8f0; padding: 4px 8px; border-radius: 6px; font-size: 13px; width: 100%; }
+        .status-badge { padding: 4px 12px; border-radius: 99px; font-size: 11px; font-weight: 700; white-space: nowrap; }
     </style>
 </head>
 
-<body class="bg-slate-50 text-slate-900 overflow-hidden">
+<body class="bg-slate-50 text-slate-900">
     <div id="app" class="flex h-screen w-full overflow-hidden">
         
-        <aside class="hidden md:flex w-72 sidebar-dark text-slate-300 flex-col shrink-0 z-30 shadow-2xl overflow-hidden">
-            <div class="flex-1 overflow-y-auto custom-scrollbar p-6">
-                <div class="flex items-center gap-3 text-white mb-8">
-                    <div class="bg-blue-600 p-2 rounded-xl"><i data-lucide="shield-check" size="20"></i></div>
-                    <h1 class="font-bold text-xl tracking-tight text-white">SalesBoard <span class="text-blue-500">PRO</span></h1>
+        <aside class="hidden md:flex w-64 sidebar-dark text-slate-300 flex-col shrink-0 z-30 shadow-xl">
+            <div class="p-6 flex-1 overflow-y-auto custom-scrollbar">
+                <div class="flex items-center gap-3 text-white mb-10">
+                    <div class="bg-blue-600 p-2 rounded-xl text-white">
+                        <i data-lucide="layout-dashboard" size="20"></i>
+                    </div>
+                    <span class="font-bold text-lg tracking-tight">SalesBoard</span>
                 </div>
-
-                <nav class="mb-8 space-y-1">
-                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 px-2">Navigation</p>
-                    <button onclick="switchView('leads')" id="nav-leads" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-blue-600 text-white font-bold transition-all shadow-lg shadow-blue-500/20">
-                        <i data-lucide="list-todo" size="18"></i> <span>案件管理</span>
+                <nav class="space-y-2 mb-10">
+                    <button onclick="switchView('leads')" id="nav-leads" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-blue-600 text-white font-bold transition-all shadow-lg shadow-blue-500/20 text-sm">
+                        <i data-lucide="list" size="18"></i> 案件管理
                     </button>
-                    <button onclick="switchView('analytics')" id="nav-analytics" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-800 text-slate-400 font-bold transition-all mt-1">
-                        <i data-lucide="bar-chart-3" size="18"></i> <span>トレンド分析</span>
+                    <button onclick="switchView('analytics')" id="nav-analytics" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-800 text-slate-400 font-bold transition-all text-sm">
+                        <i data-lucide="pie-chart" size="18"></i> 分析レポート
                     </button>
                 </nav>
-
-                <div class="bg-slate-800/50 rounded-2xl p-5 border border-slate-700/50 mb-6">
-                    <p id="summary-month-label" class="text-[10px] text-slate-400 font-bold mb-3 uppercase tracking-tighter">Target Month</p>
-                    <div class="space-y-4">
+                <div id="sidebar-stats" class="bg-slate-800/50 rounded-2xl p-4 border border-slate-700/50">
+                    <p id="summary-month-label" class="text-[10px] text-slate-500 font-bold uppercase mb-3">Target</p>
+                    <div class="space-y-3">
                         <div>
-                            <p class="text-[9px] text-slate-500 font-bold">売上(成約)</p>
-                            <p id="total-sales-sidebar" class="text-xl font-bold text-white amount-font leading-tight">¥0</p>
+                            <p class="text-[10px] text-slate-400">確定売上</p>
+                            <p id="total-sales-sidebar" class="text-lg font-bold text-white amount-font">¥0</p>
                         </div>
-                        <div class="flex justify-between border-t border-slate-700/50 pt-3">
-                            <div>
-                                <p class="text-[9px] text-slate-500 font-bold">粗利</p>
-                                <p id="total-profit-sidebar" class="text-sm font-bold text-emerald-400 amount-font">¥0</p>
-                            </div>
-                            <div class="text-right">
-                                <p class="text-[9px] text-slate-500 font-bold">利益率</p>
-                                <p id="total-margin-pct-sidebar" class="text-sm font-bold text-white amount-font">0%</p>
-                            </div>
+                        <div class="pt-2 border-t border-slate-700">
+                            <p class="text-[10px] text-slate-400">粗利合計</p>
+                            <p id="total-profit-sidebar" class="text-sm font-bold text-emerald-400 amount-font">¥0</p>
                         </div>
                     </div>
                 </div>
-
-                <div id="funnel-container" class="space-y-1"></div>
             </div>
-
             <div class="p-4 bg-slate-900/80 border-t border-slate-800">
-                <button id="toggle-edit-mode" class="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-bold transition-all border border-slate-700 text-slate-300">
-                    <i data-lucide="edit-3" size="14"></i> <span id="edit-mode-text">編集モード切替</span>
+                <button id="toggle-edit-mode" class="w-full py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300 transition-all border border-slate-700 flex items-center justify-center gap-2">
+                    <i data-lucide="edit-2" size="14"></i> <span id="edit-mode-text">編集モード</span>
                 </button>
             </div>
         </aside>
 
-        <main class="flex-1 flex flex-col min-w-0 bg-slate-50 overflow-hidden h-full">
+        <div class="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
             
-            <header class="h-20 shrink-0 bg-white border-b border-slate-200 flex items-center justify-between px-6 md:px-10 z-20">
+            <header class="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-8 shrink-0 z-20">
                 <div class="flex items-center gap-4">
-                    <div class="relative min-w-[140px]">
-                        <select id="month-selector" class="w-full appearance-none bg-slate-100 pl-3 pr-8 py-2 rounded-xl text-xs font-bold text-slate-700 outline-none cursor-pointer border-none"></select>
-                        <i data-lucide="calendar" size="14" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                    <div class="relative">
+                        <select id="month-selector" class="appearance-none bg-slate-100 pl-4 pr-10 py-2.5 rounded-xl text-sm font-bold text-slate-700 outline-none border-none cursor-pointer"></select>
+                        <i data-lucide="chevron-down" size="16" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"></i>
                     </div>
-                    <button onclick="addNewMonth()" class="p-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg transition-all">
-                        <i data-lucide="calendar-plus" size="18"></i>
+                    <button onclick="addNewMonth()" class="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl transition-all">
+                        <i data-lucide="plus-square" size="20"></i>
                     </button>
-                    <div class="relative hidden lg:block">
-                        <i data-lucide="search" size="16" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                        <input id="search-input" type="text" placeholder="案件検索..." class="pl-9 pr-4 py-2 bg-slate-100 rounded-xl text-xs w-48 focus:w-64 transition-all outline-none">
-                    </div>
                 </div>
 
                 <div class="flex items-center gap-4">
-                    <div id="save-indicator" class="hidden sm:flex items-center gap-2 text-[10px] font-bold text-slate-400 opacity-0 transition-opacity">
-                        <i data-lucide="check-circle" size="12" class="text-emerald-500"></i> <span>保存完了</span>
+                    <div id="save-indicator" class="flex items-center gap-2 text-[10px] font-bold text-slate-400 opacity-0 transition-opacity">
+                        <i data-lucide="check" size="12" class="text-emerald-500"></i> 保存済み
                     </div>
-                    <button id="add-lead-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 shadow-lg shadow-blue-500/10">
-                        <i data-lucide="plus" size="16"></i> <span>案件追加</span>
+                    <button id="add-lead-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 shadow-lg shadow-blue-500/20">
+                        <i data-lucide="plus" size="18"></i> <span>新規案件登録</span>
                     </button>
                 </div>
             </header>
 
-            <div class="flex-1 overflow-y-auto custom-scrollbar p-6 md:p-10">
+            <main class="flex-1 overflow-y-auto custom-scrollbar p-6 md:p-10 bg-slate-50">
                 
-                <div id="view-leads" class="max-w-6xl mx-auto overflow-x-auto pb-4">
-                    <div class="min-w-[850px]"> <div class="grid grid-cols-12 gap-4 px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest sticky top-0 bg-slate-50/90 backdrop-blur-sm z-10">
-                            <div class="col-span-4">案件名 / クライアント</div>
-                            <div class="col-span-2 text-center">進捗ステータス</div>
-                            <div class="col-span-2 text-right">受注単価</div>
-                            <div class="col-span-2 text-right">原価(外注費等)</div>
-                            <div class="col-span-2 text-right">粗利額</div>
-                        </div>
-                        <div id="leads-list" class="space-y-2 mt-2"></div>
+                <div id="view-leads" class="max-w-[1200px] mx-auto">
+                    <div class="lead-row grid grid-cols-12 gap-4 px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest sticky top-0 bg-slate-50/95 z-10">
+                        <div class="col-span-4">案件詳細・クライアント名</div>
+                        <div class="col-span-2 text-center">ステータス</div>
+                        <div class="col-span-2 text-right">受注単価</div>
+                        <div class="col-span-2 text-right">原価(外注)</div>
+                        <div class="col-span-2 text-right">粗利益</div>
                     </div>
+                    
+                    <div id="leads-list" class="space-y-3 mt-2 overflow-x-auto">
+                        </div>
                 </div>
 
-                <div id="view-analytics" class="max-w-6xl mx-auto hidden space-y-6">
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-                            <p class="text-[10px] text-slate-500 font-bold uppercase mb-1">Total Sales</p>
-                            <span id="kpi-sales" class="text-xl font-black amount-font text-slate-800">--</span>
-                        </div>
-                        <div class="bg-slate-900 p-5 rounded-2xl shadow-lg">
-                            <p class="text-[10px] text-slate-400 font-bold uppercase mb-1">Total Profit</p>
-                            <span id="kpi-total-profit" class="text-xl font-black amount-font text-emerald-400">--</span>
-                        </div>
-                        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm border-l-4 border-l-blue-600">
-                            <p class="text-[10px] text-slate-500 font-bold uppercase mb-1">Avg Price</p>
-                            <span id="kpi-avg-price" class="text-xl font-black amount-font text-blue-600">--</span>
-                        </div>
-                        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm border-l-4 border-l-emerald-600">
-                            <p class="text-[10px] text-slate-500 font-bold uppercase mb-1">Win Rate</p>
-                            <span id="kpi-win-rate" class="text-xl font-black amount-font text-emerald-600">--%</span>
-                        </div>
+                <div id="view-analytics" class="max-w-[1200px] mx-auto hidden space-y-8 pb-10">
+                    <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm"><p class="text-[10px] text-slate-500 font-bold mb-1">総売上</p><span id="kpi-sales" class="text-xl font-bold amount-font">¥0</span></div>
+                        <div class="bg-slate-900 p-6 rounded-2xl shadow-lg"><p class="text-[10px] text-slate-400 font-bold mb-1">粗利合計</p><span id="kpi-total-profit" class="text-xl font-bold text-emerald-400 amount-font">¥0</span></div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm"><p class="text-[10px] text-slate-500 font-bold mb-1">平均単価</p><span id="kpi-avg-price" class="text-xl font-bold text-blue-600 amount-font">¥0</span></div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm"><p class="text-[10px] text-slate-500 font-bold mb-1">成約率</p><span id="kpi-win-rate" class="text-xl font-bold text-emerald-600">0%</span></div>
                     </div>
 
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                            <h3 class="text-xs font-bold text-slate-800 uppercase tracking-widest mb-6 flex items-center gap-2">
-                                <i data-lucide="bar-chart-2" size="16" class="text-blue-600"></i> 月別：粗利 ＆ 成約率
-                            </h3>
-                            <div class="relative h-[300px] w-full"><canvas id="performanceTrendChart"></canvas></div>
+                            <h3 class="text-xs font-bold text-slate-800 uppercase mb-6 flex items-center gap-2"><i data-lucide="bar-chart-2" size="16"></i> 粗利・成約率トレンド</h3>
+                            <div style="height: 300px; position: relative;"><canvas id="performanceTrendChart"></canvas></div>
                         </div>
                         <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                            <h3 class="text-xs font-bold text-slate-800 uppercase tracking-widest mb-6 flex items-center gap-2">
-                                <i data-lucide="trending-up" size="16" class="text-slate-400"></i> 売上・粗利 推移
-                            </h3>
-                            <div class="relative h-[300px] w-full"><canvas id="financialChart"></canvas></div>
+                            <h3 class="text-xs font-bold text-slate-800 uppercase mb-6 flex items-center gap-2"><i data-lucide="trending-up" size="16"></i> 売上推移</h3>
+                            <div style="height: 300px; position: relative;"><canvas id="financialChart"></canvas></div>
                         </div>
                     </div>
                 </div>
-
-            </div>
-        </main>
+            </main>
+        </div>
     </div>
 
     <div id="month-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center hidden">
-        <div class="bg-white p-6 rounded-3xl shadow-2xl w-80">
-            <h3 class="text-lg font-bold mb-4">表示月の追加</h3>
-            <input type="month" id="new-month-input" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl mb-6 outline-none text-sm">
-            <div class="flex gap-2">
-                <button onclick="closeMonthModal()" class="flex-1 py-2.5 text-xs font-bold text-slate-600 bg-slate-100 rounded-xl">キャンセル</button>
-                <button onclick="confirmMonthAdd()" class="flex-1 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-bold">追加</button>
+        <div class="bg-white p-8 rounded-3xl shadow-2xl w-80">
+            <h3 class="text-lg font-bold mb-6">月の追加</h3>
+            <input type="month" id="new-month-input" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl mb-6 outline-none">
+            <div class="flex gap-3">
+                <button onclick="closeMonthModal()" class="flex-1 py-3 text-sm font-bold text-slate-600 bg-slate-100 rounded-xl">戻る</button>
+                <button onclick="confirmMonthAdd()" class="flex-1 py-3 bg-blue-600 text-white rounded-xl text-sm font-bold">追加</button>
             </div>
         </div>
     </div>
 
     <script>
-    // --- データロジック ---
     const SUPABASE_URL = 'https://cliiqahxazbfdqxrwzvp.supabase.co'; 
     const SUPABASE_KEY = 'sb_publishable_JXuDTqzZANTAxCYEjBjQWA_tmqXjZYc'; 
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    const STATUS_STEPS = ['アポイント済', '現調済', '見積提示', '成約'];
     const STATUS_THEMES = {
-        'アポイント済': 'bg-slate-100 text-slate-500 border border-slate-200',
-        '現調済': 'bg-amber-100 text-amber-700 border border-amber-200',
-        '見積提示': 'bg-blue-100 text-blue-700 border border-blue-200',
-        '成約': 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+        'アポイント済': 'bg-slate-100 text-slate-600 border border-slate-200',
+        '現調済': 'bg-amber-50 text-amber-700 border border-amber-200',
+        '見積提示': 'bg-blue-50 text-blue-700 border border-blue-200',
+        '成約': 'bg-emerald-50 text-emerald-700 border border-emerald-200'
     };
 
     let leads = [];
-    let currentView = 'leads';
     let selectedMonth = new Date().toISOString().slice(0, 7);
     let isEditMode = false;
-    let charts = { financial: null, performanceTrend: null };
+    let charts = {};
 
     const fmt = n => new Intl.NumberFormat('ja-JP').format(n);
 
-    async function loadData() {
-        const { data, error } = await _supabase.from('leads').select('*').order('id', { ascending: false });
+    async function init() {
+        const { data } = await _supabase.from('leads').select('*').order('id', { ascending: false });
         leads = data || [];
-        refreshUI();
+        refresh();
     }
 
-    async function saveToSupabase() {
-        const { error } = await _supabase.from('leads').upsert(leads);
-        const indicator = document.getElementById('save-indicator');
-        indicator.classList.replace('opacity-0', 'opacity-100');
-        setTimeout(() => indicator.classList.replace('opacity-100', 'opacity-0'), 2000);
-    }
-
-    function refreshUI() {
-        renderLeads();
-        updateSidebar();
-        updateMonthSelector();
-        if(currentView === 'analytics') renderAnalytics();
+    function refresh() {
+        renderList();
+        renderSidebar();
+        renderMonthSelect();
+        if (document.getElementById('view-analytics').classList.contains('hidden') === false) renderCharts();
         lucide.createIcons();
     }
 
-    function renderLeads() {
+    function renderList() {
         const list = document.getElementById('leads-list');
-        const q = (document.getElementById('search-input').value || '').toLowerCase();
+        const filtered = leads.filter(l => l.month === selectedMonth);
         
-        const filtered = leads.filter(l => l.month === selectedMonth && (q === '' || l.name.toLowerCase().includes(q) || l.status.toLowerCase().includes(q)));
-        
-        list.innerHTML = filtered.length ? filtered.map(lead => {
-            const profit = lead.price - lead.cost;
-            return `
-            <div class="grid grid-cols-12 gap-4 items-center bg-white rounded-xl p-4 shadow-sm border ${isEditMode ? 'border-blue-400 bg-blue-50/30' : 'border-transparent'} transition-all hover:border-slate-300">
-                <div class="col-span-4 flex items-center gap-3">
-                    <div class="w-8 h-8 rounded-lg ${lead.status === '成約' ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'} flex items-center justify-center shrink-0">
-                        <i data-lucide="briefcase" size="14"></i>
+        list.innerHTML = filtered.length ? filtered.map(l => `
+            <div class="lead-row grid grid-cols-12 gap-4 items-center bg-white rounded-2xl p-5 shadow-sm border ${isEditMode ? 'border-blue-400 ring-2 ring-blue-50' : 'border-transparent'} transition-all">
+                <div class="col-span-4 flex items-center gap-4">
+                    <div class="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center shrink-0 border border-slate-100 text-slate-400">
+                        <i data-lucide="briefcase" size="16"></i>
                     </div>
-                    <div class="flex-1 min-w-0">
-                        ${isEditMode ? `<input class="edit-input font-bold" value="${lead.name}" oninput="updateLead(${lead.id}, 'name', this.value)">` : `<p class="text-xs font-bold text-slate-700 truncate">${lead.name}</p>`}
-                    </div>
+                    ${isEditMode ? `<input class="edit-input font-bold" value="${l.name}" oninput="updateLead(${l.id},'name',this.value)">` : `<span class="text-sm font-bold text-slate-800">${l.name}</span>`}
                 </div>
                 <div class="col-span-2 flex justify-center">
-                    ${isEditMode ? `<select onchange="updateLead(${lead.id}, 'status', this.value)" class="edit-input text-[10px] font-bold">${STATUS_STEPS.map(s => `<option value="${s}" ${s === lead.status ? 'selected' : ''}>${s}</option>`).join('')}</select>` : `<span class="status-badge ${STATUS_THEMES[lead.status]}">${lead.status}</span>`}
+                    ${isEditMode ? `<select onchange="updateLead(${l.id},'status',this.value)" class="edit-input">${['アポイント済','現調済','見積提示','成約'].map(s=>`<option value="${s}" ${s===l.status?'selected':''}>${s}</option>`).join('')}</select>` : `<span class="status-badge ${STATUS_THEMES[l.status] || 'bg-slate-100 text-slate-500'}">${l.status}</span>`}
                 </div>
                 <div class="col-span-2 text-right">
-                    ${isEditMode ? `<input type="number" value="${lead.price}" oninput="updateLead(${lead.id}, 'price', Number(this.value))" class="edit-input text-right">` : `<span class="text-xs font-bold amount-font">¥${fmt(lead.price)}</span>`}
+                    ${isEditMode ? `<input type="number" class="edit-input text-right" value="${l.price}" oninput="updateLead(${l.id},'price',Number(this.value))">` : `<span class="text-sm font-bold amount-font">¥${fmt(l.price)}</span>`}
                 </div>
-                <div class="col-span-2 text-right">
-                    ${isEditMode ? `<input type="number" value="${lead.cost}" oninput="updateLead(${lead.id}, 'cost', Number(this.value))" class="edit-input text-right">` : `<span class="text-xs text-slate-400 amount-font">¥${fmt(lead.cost)}</span>`}
+                <div class="col-span-2 text-right text-slate-400">
+                    ${isEditMode ? `<input type="number" class="edit-input text-right" value="${l.cost}" oninput="updateLead(${l.id},'cost',Number(this.value))">` : `<span class="text-sm amount-font">¥${fmt(l.cost)}</span>`}
                 </div>
-                <div class="col-span-2 flex items-center justify-end gap-2">
-                    <span class="text-xs font-bold ${profit >= 0 ? 'text-blue-600' : 'text-red-500'} amount-font">¥${fmt(profit)}</span>
-                    ${isEditMode ? `<button onclick="deleteLead(${lead.id})" class="text-slate-300 hover:text-red-500 transition-colors"><i data-lucide="trash-2" size="14"></i></button>` : ''}
+                <div class="col-span-2 flex items-center justify-end gap-3 font-bold">
+                    <span class="text-sm ${l.price-l.cost>=0?'text-blue-600':'text-red-500'} amount-font">¥${fmt(l.price-l.cost)}</span>
+                    ${isEditMode ? `<button onclick="deleteLead(${l.id})" class="text-slate-300 hover:text-red-500 transition-colors"><i data-lucide="trash-2" size="16"></i></button>` : ''}
                 </div>
-            </div>`;
-        }).join('') : `<div class="py-20 text-center text-slate-400 bg-white rounded-3xl border-2 border-dashed text-sm">データがありません</div>`;
+            </div>
+        `).join('') : `<div class="p-20 text-center bg-white rounded-3xl border-2 border-dashed border-slate-200 text-slate-400 font-bold">データがありません</div>`;
         lucide.createIcons();
     }
 
-    function updateSidebar() {
-        const cur = leads.filter(l => l.month === selectedMonth);
-        const closed = cur.filter(l => l.status === '成約');
-        const sales = closed.reduce((sum, l) => sum + l.price, 0);
-        const profit = sales - closed.reduce((sum, l) => sum + l.cost, 0);
-        
+    function renderSidebar() {
+        const cur = leads.filter(l => l.month === selectedMonth && l.status === '成約');
+        const sales = cur.reduce((s,l)=>s+l.price,0);
+        const profit = sales - cur.reduce((s,l)=>s+l.cost,0);
         document.getElementById('total-sales-sidebar').innerText = `¥${fmt(sales)}`;
         document.getElementById('total-profit-sidebar').innerText = `¥${fmt(profit)}`;
-        document.getElementById('total-margin-pct-sidebar').innerText = (sales > 0 ? Math.round((profit/sales)*100) : 0) + '%';
-        document.getElementById('summary-month-label').innerText = selectedMonth.replace('-','年') + '月分の実績';
-        
-        document.getElementById('funnel-container').innerHTML = STATUS_STEPS.map(step => `
-            <div class="flex items-center justify-between px-2 py-1.5 rounded-lg hover:bg-slate-800/40">
-                <span class="text-[10px] font-bold text-slate-500 uppercase">${step}</span>
-                <span class="text-[10px] font-bold text-white bg-slate-700 px-2 rounded-md">${cur.filter(l => l.status === step).length}</span>
-            </div>
-        `).join('');
+        document.getElementById('summary-month-label').innerText = selectedMonth.replace('-','年') + '月分';
     }
 
-    function renderAnalytics() {
-        const closed = leads.filter(l => l.status === '成約');
-        const sales = closed.reduce((s,l) => s + l.price, 0);
-        const profit = sales - closed.reduce((s,l) => s + l.cost, 0);
-        
-        document.getElementById('kpi-sales').innerText = `¥${fmt(sales)}`;
-        document.getElementById('kpi-total-profit').innerText = `¥${fmt(profit)}`;
-        document.getElementById('kpi-avg-price').innerText = `¥${fmt(closed.length ? Math.round(sales/closed.length) : 0)}`;
-        document.getElementById('kpi-win-rate').innerText = (leads.length ? Math.round((closed.length/leads.length)*100) : 0) + '%';
-
-        const ms = Array.from(new Set(leads.map(l => l.month))).sort();
-        const salesT = [], profitT = [], wrT = [];
+    function renderCharts() {
+        const ms = Array.from(new Set(leads.map(l=>l.month))).sort();
+        const salesD = [], profitD = [], winD = [];
         ms.forEach(m => {
-            const ml = leads.filter(l => l.month === m);
-            const mc = ml.filter(l => l.status === '成約');
-            const ms = mc.reduce((s,l) => s + l.price, 0);
-            salesT.push(ms);
-            profitT.push(ms - mc.reduce((s,l) => s + l.cost, 0));
-            wrT.push(ml.length ? Math.round((mc.length/ml.length)*100) : 0);
+            const ml = leads.filter(l=>l.month===m);
+            const mc = ml.filter(l=>l.status==='成約');
+            const ms = mc.reduce((s,l)=>s+l.price,0);
+            salesD.push(ms);
+            profitD.push(ms - mc.reduce((s,l)=>s+l.cost,0));
+            winD.push(ml.length ? Math.round((mc.length/ml.length)*100) : 0);
         });
 
-        if(charts.performanceTrend) charts.performanceTrend.destroy();
-        charts.performanceTrend = new Chart(document.getElementById('performanceTrendChart'), {
+        if(charts.t) charts.t.destroy();
+        charts.t = new Chart(document.getElementById('performanceTrendChart'), {
             type: 'bar',
             data: {
-                labels: ms.map(m => m.split('-')[1]+'月'),
+                labels: ms.map(m=>m.split('-')[1]+'月'),
                 datasets: [
-                    { label: '利益額', data: profitT, backgroundColor: '#3b82f6', borderRadius: 4, yAxisID: 'y' },
-                    { label: '成約率%', data: wrT, backgroundColor: '#10b98199', borderRadius: 4, yAxisID: 'y1' }
+                    { label: '粗利益', data: profitD, backgroundColor: '#3b82f6', yAxisID: 'y' },
+                    { label: '成約率', data: winD, type: 'line', borderColor: '#10b981', yAxisID: 'y1' }
                 ]
             },
-            options: { responsive: true, maintainAspectRatio: false, scales: { y: { position: 'left' }, y1: { position: 'right', grid: { drawOnChartArea: false }, max: 100 } } }
+            options: { responsive: true, maintainAspectRatio: false, scales: { y1: { position: 'right', max: 100 } } }
         });
-
-        if(charts.financial) charts.financial.destroy();
-        charts.financial = new Chart(document.getElementById('financialChart'), {
+        
+        if(charts.f) charts.f.destroy();
+        charts.f = new Chart(document.getElementById('financialChart'), {
             type: 'line',
             data: {
-                labels: ms.map(m => m.split('-')[1]+'月'),
-                datasets: [
-                    { label: '売上', data: salesT, borderColor: '#cbd5e1', tension: 0.3 },
-                    { label: '利益', data: profitT, borderColor: '#334155', tension: 0.3 }
-                ]
+                labels: ms.map(m=>m.split('-')[1]+'月'),
+                datasets: [{ label: '総売上', data: salesD, borderColor: '#334155', tension: 0.3 }]
             },
             options: { responsive: true, maintainAspectRatio: false }
         });
+
+        const totalS = salesD.reduce((a,b)=>a+b,0);
+        const totalP = profitD.reduce((a,b)=>a+b,0);
+        document.getElementById('kpi-sales').innerText = `¥${fmt(totalS)}`;
+        document.getElementById('kpi-total-profit').innerText = `¥${fmt(totalP)}`;
     }
 
     function switchView(view) {
-        currentView = view;
         document.getElementById('view-leads').classList.toggle('hidden', view !== 'leads');
         document.getElementById('view-analytics').classList.toggle('hidden', view !== 'analytics');
-        document.getElementById('nav-leads').className = `w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${view==='leads'?'bg-blue-600 text-white shadow-lg shadow-blue-500/20':'text-slate-400 hover:bg-slate-800'}`;
-        document.getElementById('nav-analytics').className = `w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${view==='analytics'?'bg-blue-600 text-white shadow-lg shadow-blue-500/20':'text-slate-400 hover:bg-slate-800'}`;
-        if(view === 'analytics') setTimeout(renderAnalytics, 100);
+        document.getElementById('nav-leads').className = `w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all text-sm ${view==='leads'?'bg-blue-600 text-white shadow-lg':'text-slate-400 hover:bg-slate-800'}`;
+        document.getElementById('nav-analytics').className = `w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all text-sm ${view==='analytics'?'bg-blue-600 text-white shadow-lg':'text-slate-400 hover:bg-slate-800'}`;
+        if(view === 'analytics') setTimeout(renderCharts, 100);
     }
 
-    let dbTimer;
+    let saveTimer;
     function updateLead(id, field, val) {
         leads = leads.map(l => l.id === id ? {...l, [field]: val} : l);
-        updateSidebar();
-        clearTimeout(dbTimer);
-        dbTimer = setTimeout(saveToSupabase, 800);
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(async () => {
+            await _supabase.from('leads').upsert(leads);
+            const ind = document.getElementById('save-indicator');
+            ind.style.opacity = 1;
+            setTimeout(()=>ind.style.opacity = 0, 2000);
+            renderSidebar();
+        }, 1000);
+    }
+
+    function renderMonthSelect() {
+        const ms = Array.from(new Set(leads.map(l=>l.month)));
+        if(!ms.includes(selectedMonth)) ms.push(selectedMonth);
+        ms.sort().reverse();
+        document.getElementById('month-selector').innerHTML = ms.map(m=>`<option value="${m}" ${m===selectedMonth?'selected':''}>${m.replace('-','年')}月分</option>`).join('');
     }
 
     async function deleteLead(id) {
-        if(!confirm('削除してよろしいですか？')) return;
+        if(!confirm('削除しますか？')) return;
         leads = leads.filter(l => l.id !== id);
         await _supabase.from('leads').delete().eq('id', id);
-        refreshUI();
-    }
-
-    function updateMonthSelector() {
-        const ms = Array.from(new Set(leads.map(l => l.month)));
-        if(!ms.includes(selectedMonth)) ms.push(selectedMonth);
-        ms.sort().reverse();
-        document.getElementById('month-selector').innerHTML = ms.map(m => `<option value="${m}" ${m===selectedMonth?'selected':''}>${m.replace('-','年')}月分</option>`).join('');
+        refresh();
     }
 
     function addNewMonth() { document.getElementById('month-modal').classList.remove('hidden'); }
     function closeMonthModal() { document.getElementById('month-modal').classList.add('hidden'); }
     function confirmMonthAdd() {
         const v = document.getElementById('new-month-input').value;
-        if(!v) return;
-        selectedMonth = v;
-        updateMonthSelector();
-        closeMonthModal();
-        refreshUI();
+        if(v) { selectedMonth = v; refresh(); closeMonthModal(); }
     }
 
     window.onload = () => {
-        loadData();
+        init();
         document.getElementById('toggle-edit-mode').onclick = () => {
             isEditMode = !isEditMode;
-            document.getElementById('edit-mode-text').innerText = isEditMode ? '完了' : '編集モード切替';
+            document.getElementById('edit-mode-text').innerText = isEditMode ? '編集完了' : '編集モード';
             document.getElementById('toggle-edit-mode').classList.toggle('bg-blue-600', isEditMode);
-            if(!isEditMode) saveToSupabase();
-            renderLeads();
+            renderList();
         };
         document.getElementById('add-lead-btn').onclick = () => {
             leads.unshift({ id: Date.now(), name: '新規案件', status: 'アポイント済', price: 0, cost: 0, month: selectedMonth });
             isEditMode = true;
-            refreshUI();
-            saveToSupabase();
+            refresh();
+            _supabase.from('leads').upsert(leads);
         };
-        document.getElementById('search-input').oninput = renderLeads;
-        document.getElementById('month-selector').onchange = (e) => { selectedMonth = e.target.value; refreshUI(); };
+        document.getElementById('month-selector').onchange = (e) => { selectedMonth = e.target.value; refresh(); };
     };
     </script>
 </body>
