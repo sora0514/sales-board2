@@ -23,7 +23,7 @@
         .edit-input:focus { background-color: white; border-color: #3b82f6; outline: none; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
         .save-indicator { transition: opacity 0.3s; opacity: 0; pointer-events: none; }
         .save-indicator.show { opacity: 1; }
-        #auth-overlay { backdrop-filter: blur(12px); }
+        /* モバイル用テーブルスクロール対策 */
         @media (max-width: 768px) {
             .mobile-scroll-x { overflow-x: auto; padding-bottom: 1rem; }
             .mobile-min-w { min-width: 600px; }
@@ -31,35 +31,9 @@
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900">
-
-    <div id="auth-overlay" class="fixed inset-0 z-[300] flex items-center justify-center hidden bg-slate-900/90">
-        <div class="bg-white p-10 rounded-[2.5rem] shadow-2xl w-full max-w-md text-center">
-            <div class="bg-blue-600 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6 text-white shadow-xl shadow-blue-500/20">
-                <i data-lucide="shield-check" size="32"></i>
-            </div>
-            <h1 class="text-2xl font-bold mb-2">SalesBoard PRO</h1>
-            <p class="text-slate-500 mb-8 text-sm font-medium">メールアドレスでログイン</p>
-            
-            <div class="space-y-4 mb-8 text-left">
-                <div>
-                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Email</label>
-                    <input type="email" id="login-email" placeholder="mail@example.com" class="w-full p-4 bg-slate-100 border-none rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 transition-all">
-                </div>
-                <div>
-                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Password</label>
-                    <input type="password" id="login-password" placeholder="••••••••" class="w-full p-4 bg-slate-100 border-none rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 transition-all">
-                </div>
-            </div>
-
-            <div class="space-y-3">
-                <button onclick="handleEmailLogin()" class="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/30">ログイン</button>
-                <button onclick="handleEmailSignup()" class="w-full py-3 text-slate-500 text-sm font-bold hover:text-slate-800 transition-all">新規アカウント登録</button>
-            </div>
-            <p id="auth-error" class="mt-4 text-xs text-red-500 hidden font-bold"></p>
-        </div>
-    </div>
-
     <div id="app" class="flex flex-col md:flex-row min-h-screen">
+        
+        <!-- Sidebar -->
         <aside class="w-full md:w-72 sidebar-dark flex flex-col shrink-0 z-20 shadow-2xl">
             <div class="flex-1 overflow-y-auto custom-scrollbar p-8">
                 <div class="flex items-center gap-3 text-white mb-10">
@@ -105,23 +79,25 @@
                 </nav>
             </div>
 
-            <div class="p-6 bg-slate-900/80 border-t border-slate-800 backdrop-blur-sm space-y-2">
+            <div class="p-6 bg-slate-900/80 border-t border-slate-800 backdrop-blur-sm">
                 <button id="toggle-edit-mode" class="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm font-bold transition-all border border-slate-700 text-slate-300 shadow-lg">
                     <i data-lucide="edit-3" size="16"></i> <span id="edit-mode-text">編集モード切替</span>
-                </button>
-                <button onclick="handleLogout()" class="w-full py-2 text-[10px] font-bold text-slate-600 hover:text-red-400 transition-all flex items-center justify-center gap-2 uppercase tracking-widest">
-                    <i data-lucide="log-out" size="12"></i> Logout
                 </button>
             </div>
         </aside>
 
+        <!-- Main Content -->
         <main class="flex-1 flex flex-col min-w-0 bg-slate-50 overflow-hidden">
+            <!-- Header (Smartphone Optimized) -->
             <header class="md:h-20 px-4 md:px-10 py-4 md:py-0 flex flex-col md:flex-row md:items-center justify-between bg-white border-b border-slate-200 shrink-0 gap-4">
+                
+                <!-- Row 1: Logo (Mobile only) & Action Buttons -->
                 <div class="flex items-center justify-between md:justify-start gap-4">
                     <div class="flex items-center gap-2 md:hidden">
                         <div class="bg-blue-600 p-1.5 rounded-lg text-white"><i data-lucide="shield-check" size="16"></i></div>
                         <span class="font-bold text-sm">SalesBoard</span>
                     </div>
+                    
                     <div class="flex items-center gap-2">
                         <button id="add-lead-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 md:px-6 py-2.5 rounded-xl text-xs md:text-sm font-bold flex items-center gap-2 shadow-lg shadow-blue-500/20">
                             <i data-lucide="plus" size="18"></i> <span class="hidden xs:inline">案件登録</span><span class="inline xs:hidden">追加</span>
@@ -133,12 +109,14 @@
                     </div>
                 </div>
 
+                <!-- Row 2: Selectors & Search -->
                 <div class="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
                     <div class="relative shrink-0">
                         <select id="month-selector" class="appearance-none bg-slate-100 pl-3 pr-8 py-2.5 rounded-xl text-xs md:text-sm font-bold text-slate-700 outline-none cursor-pointer border-none"></select>
                         <i data-lucide="calendar" size="12" class="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400"></i>
                     </div>
                     <button onclick="addNewMonth()" class="shrink-0 p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl transition-all"><i data-lucide="calendar-plus" size="18"></i></button>
+                    
                     <div class="relative flex-1 md:flex-none group">
                         <i data-lucide="search" size="14" class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"></i>
                         <input id="search-input" type="text" placeholder="検索..." class="pl-10 pr-4 py-2.5 bg-slate-100 rounded-xl text-xs md:text-sm w-full md:w-48 lg:w-64 focus:md:w-80 transition-all outline-none">
@@ -147,6 +125,8 @@
             </header>
 
             <div id="content-scroll" class="flex-1 overflow-y-auto p-4 md:p-10 custom-scrollbar">
+                
+                <!-- View 1: Leads List -->
                 <div id="view-leads" class="max-w-6xl mx-auto space-y-6">
                     <div class="hidden md:grid md:grid-cols-12 gap-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">
                         <div class="col-span-4">Project Details</div>
@@ -158,12 +138,14 @@
                     <div id="leads-list" class="space-y-3"></div>
                 </div>
 
+                <!-- View 2: Analytics -->
                 <div id="view-analytics" class="max-w-6xl mx-auto hidden space-y-8 pb-10">
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div class="metric-card shadow-sm border-l-4 border-l-slate-800">
                             <p class="text-[10px] text-slate-500 font-bold uppercase mb-1">Total Sales</p>
                             <span id="kpi-sales" class="text-lg md:text-2xl font-black amount-font text-slate-800">--</span>
                         </div>
+                        <!-- Updated Profit Card: Standardized to white background with blue accent (matches bar charts) -->
                         <div class="metric-card shadow-sm border-l-4 border-l-blue-600">
                             <p class="text-[10px] text-slate-500 font-bold uppercase mb-1">Total Profit</p>
                             <span id="kpi-total-profit" class="text-lg md:text-2xl font-black amount-font text-blue-600">--</span>
@@ -177,6 +159,7 @@
                             <span id="kpi-win-rate" class="text-lg md:text-2xl font-black amount-font text-emerald-600">--%</span>
                         </div>
                     </div>
+
                     <div class="space-y-6">
                         <div class="bg-white p-4 md:p-8 rounded-2xl border border-slate-200 shadow-sm">
                             <h3 class="font-bold text-slate-800 mb-8 flex items-center gap-2 text-xs md:text-sm uppercase tracking-wider">
@@ -184,6 +167,7 @@
                             </h3>
                             <div class="h-64 md:h-96 w-full"><canvas id="performanceTrendChart"></canvas></div>
                         </div>
+
                         <div class="bg-white p-4 md:p-8 rounded-2xl border border-slate-200 shadow-sm">
                             <h3 class="font-bold text-slate-800 mb-6 flex items-center gap-2 text-xs md:text-sm uppercase tracking-wider">
                                 <i data-lucide="trending-up" size="18" class="text-slate-400"></i> 月別：収益・利益推移
@@ -196,6 +180,7 @@
         </main>
     </div>
 
+    <!-- Month Modal -->
     <div id="month-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center hidden">
         <div class="bg-white p-8 rounded-3xl shadow-2xl w-80 md:w-96">
             <h3 class="text-lg font-bold mb-4">表示月の追加</h3>
@@ -227,62 +212,10 @@
     let isEditMode = false;
     let searchQuery = '';
     let charts = { financial: null, performanceTrend: null };
-    let currentUser = null;
 
     const fmt = n => new Intl.NumberFormat('ja-JP').format(n);
 
-    // --- 認証機能 ---
-    async function initAuth() {
-        const { data: { session } } = await _supabase.auth.getSession();
-        handleSession(session);
-        _supabase.auth.onAuthStateChange((_event, session) => handleSession(session));
-    }
-
-    function handleSession(session) {
-        const overlay = document.getElementById('auth-overlay');
-        if (session) {
-            currentUser = session.user;
-            overlay.classList.add('hidden');
-            loadData();
-        } else {
-            currentUser = null;
-            overlay.classList.remove('hidden');
-        }
-        lucide.createIcons();
-    }
-
-    async function handleEmailLogin() {
-        const email = document.getElementById('login-email').value;
-        const password = document.getElementById('login-password').value;
-        const { error } = await _supabase.auth.signInWithPassword({ email, password });
-        if (error) showAuthError(error.message);
-    }
-
-    async function handleEmailSignup() {
-        const email = document.getElementById('login-email').value;
-        const password = document.getElementById('login-password').value;
-        const { error } = await _supabase.auth.signUp({ email, password });
-        if (error) {
-            showAuthError(error.message);
-        } else {
-            alert('アカウントを作成しました。そのままログインしてください。');
-        }
-    }
-
-    function showAuthError(msg) {
-        const el = document.getElementById('auth-error');
-        el.innerText = msg;
-        el.classList.remove('hidden');
-    }
-
-    async function handleLogout() {
-        if(confirm('ログアウトしますか？')) await _supabase.auth.signOut();
-    }
-
-    // --- データ機能 ---
     async function loadData() {
-        if (!currentUser) return;
-        // 自分のデータのみ取得
         const { data, error } = await _supabase.from('leads').select('*').order('id', { ascending: false });
         if (error) {
             const saved = localStorage.getItem(STORAGE_KEY);
@@ -294,11 +227,8 @@
     }
 
     async function saveToLocalStorage() {
-        if (!currentUser) return;
-        // 保存時に user_id を強制付与
-        const leadsWithUser = leads.map(l => ({ ...l, user_id: currentUser.id }));
-        const { error } = await _supabase.from('leads').upsert(leadsWithUser);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify({ leads: leadsWithUser }));
+        const { error } = await _supabase.from('leads').upsert(leads);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ leads }));
         const el = document.getElementById('save-indicator');
         if (el) { el.classList.add('show'); setTimeout(() => el.classList.remove('show'), 2000); }
     }
@@ -395,8 +325,9 @@
             const mL = leads.filter(l => l.month === m);
             const mC = mL.filter(l => l.status === '成約');
             const mS = mC.reduce((s, l) => s + l.price, 0);
+            const mP = mS - mC.reduce((s, l) => s + l.cost, 0);
             salesT.push(mS);
-            profitT.push(mS - mC.reduce((s, l) => s + l.cost, 0));
+            profitT.push(mP);
             winRateT.push(mL.length ? Math.round((mC.length / mL.length) * 100) : 0);
         });
 
@@ -437,7 +368,7 @@
 
     async function deleteLead(id) {
         if(!confirm('削除しますか？')) return;
-        await _supabase.from('leads').delete().eq('id', id);
+        const { error } = await _supabase.from('leads').delete().eq('id', id);
         leads = leads.filter(l => l.id !== id);
         saveToLocalStorage();
         refreshUI();
@@ -463,7 +394,7 @@
     }
 
     window.onload = () => {
-        initAuth();
+        loadData();
         document.getElementById('toggle-edit-mode').onclick = () => {
             isEditMode = !isEditMode;
             document.getElementById('edit-mode-text').innerText = isEditMode ? '完了' : '編集モード切替';
